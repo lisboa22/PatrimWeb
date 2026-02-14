@@ -1,10 +1,8 @@
 /patrimweb/lib/configuracao/
 database.properties
 
-/patrimweb/src/main/java/br/com/patrimweb/controller/
 LoginGoogleController.java
 
-/patrimweb/src/main/webapp/
 index.jsp
 
 /.metadata/
