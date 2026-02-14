@@ -1,6 +1,9 @@
 package br.com.patrimweb.controller;
 
 import java.io.IOException;
+
+import br.com.patrimweb.utils.ConfigService;
+
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -53,8 +56,10 @@ public class LoginGoogleController extends HttpServlet {
      * Utilizado para validar se o token recebido foi realmente emitido
      * para esta aplicação específica.
      */
-    private static final String CLIENT_ID = 
-        "";
+    
+    //request.setAttribute("clientId", ConfigService.getClientId());
+
+    private static final String CLIENT_ID = ConfigService.getClientId();
 
     /**
      * Método responsável por processar requisições POST provenientes

@@ -72,6 +72,6 @@ public class LogoutController extends HttpServlet {
         // 🔄 Redireciona o usuário para a página inicial.
         // O uso de getContextPath() garante que o caminho funcione
         // corretamente independentemente do nome do contexto da aplicação.
-        response.sendRedirect(request.getContextPath() + "/index.jsp");
+        response.sendRedirect(request.getContextPath() + "/IndexController");
     }
 }

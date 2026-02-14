@@ -111,10 +111,10 @@
                     Função JavaScript executada após autenticação bem-sucedida.
             -->
             <div id="g_id_onload"
-                 data-client_id=""
+                 data-client_id="${clientId}"
                  data-callback="handleGoogleLogin">
             </div>
-            
+           
             <!--
                 Renderização do botão padrão de login do Google.
                 Os atributos data-* controlam aparência e comportamento.
