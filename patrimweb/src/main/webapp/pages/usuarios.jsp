@@ -51,7 +51,68 @@
 
     <!-- CSS principal do sistema -->
     <link rel="stylesheet" href="css/patrimweb.css">
-    
+
+    <style>
+        /* ─── Campo de senha com botão mostrar/ocultar ─── */
+        .input-senha-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-senha-wrapper .form-input {
+            flex: 1;
+            padding-right: 2.5rem;
+        }
+        .btn-toggle-senha {
+            position: absolute;
+            right: 0.65rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+        .btn-toggle-senha:hover { color: #374151; }
+
+        /* ─── Divisor de seção no modal ─── */
+        .form-section-divider {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0.5rem 0 0.25rem;
+            color: #6b7280;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .form-section-divider::before,
+        .form-section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background-color: #e5e7eb;
+        }
+        .form-section-divider small {
+            font-size: 0.72rem;
+            font-weight: 400;
+            text-transform: none;
+            color: #9ca3af;
+        }
+
+        /* ─── Mensagem de erro de confirmação de senha ─── */
+        .msg-erro-senha {
+            color: #dc2626;
+            font-size: 0.78rem;
+            margin-top: 0.3rem;
+            display: block;
+        }
+    </style>
+
 </head>
 <body>
 
@@ -189,7 +250,8 @@
 																					        '${u.cpfUsu}',
 																					        '${u.emailUsu}',
 																					        '${u.telefoneUsu}',
-																					        '${u.enderecoUsu}'
+																					        '${u.enderecoUsu}',
+																					        '${u.perfilUsu.idPerfil}'
 																					    )">
 					                        <i class="fa-solid fa-pen"></i>
 					                    </button>
@@ -230,7 +292,7 @@
                     Regra de negócio:
                     O campo hidden "action" determina qual operação o controller executará.
                 -->
-                <form id="formUsuario" action="/patrimweb/UsuarioController" method="post">
+                <form id="formUsuario" action="/patrimweb/UsuarioController" method="post" autocomplete="off">
                 
     			<input type="hidden" name="action" value="adicionar">
     
@@ -254,7 +316,7 @@
 
                     <div class="form-group full-width">
                         <label class="form-label">E-mail</label>
-                        <input type="email" name="email_usu" class="form-input" placeholder="usuario@email.com" required>
+                        <input type="email" name="email_usu" class="form-input" placeholder="usuario@email.com" required autocomplete="off">
                     </div>
 
                     <div class="form-group full-width">
@@ -262,11 +324,26 @@
                         <textarea name="endereco_usu" class="form-input" placeholder="Rua, Número, Bairro, Cidade - UF"></textarea>
                     </div>
                     
-                     <div class="form-group full-width">
+                    <div class="form-group full-width">
                         <label class="form-label">Senha</label>
-                        <!-- Campo obrigatório conforme regra de cadastro -->
-                        <input type="text" name="senha_usu" class="form-input" required>
+                        <!-- Campo obrigatório no cadastro. type=password oculta a digitação. -->
+                        <div class="input-senha-wrapper">
+                            <input type="password" name="senha_usu" id="senha_usu" class="form-input" placeholder="Mínimo 6 caracteres" required autocomplete="new-password">
+                            <button type="button" class="btn-toggle-senha" onclick="toggleSenha('senha_usu', 'icone-senha-add')" tabindex="-1">
+                                <i id="icone-senha-add" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
+                    
+                    <div class="form-group full-width">
+					    <label class="form-label">Perfil</label>
+					    <select name="id_perfil" class="form-input" required>
+					        <option value="">Selecione...</option>
+					        <c:forEach var="p" items="${perfis}">
+					            <option value="${p.idPerfil}">${p.nomePerfil}</option>
+					        </c:forEach>
+					    </select>
+					</div>
                     
                 </form>
             </div>
@@ -292,7 +369,7 @@
         <div class="modal-body">
 
             <!-- Formulário de edição -->
-            <form id="formEditarUsuario" action="/patrimweb/UsuarioController" method="post">
+            <form id="formEditarUsuario" action="/patrimweb/UsuarioController" method="post" autocomplete="off">
                 
                 <!-- Define operação de edição -->
                 <input type="hidden" name="action" value="editar">
@@ -324,6 +401,66 @@
                 <div class="form-group full-width">
                     <label class="form-label">Endereço</label>
                     <textarea name="endereco_usu_edt" id="edit_endereco_usu" class="form-input"></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label">Perfil</label>
+                    <select name="id_perfil" id="edit_id_perfil" class="form-input" required>
+                        <option value="">Selecione...</option>
+                        <c:forEach var="p" items="${perfis}">
+                            <option value="${p.idPerfil}">${p.nomePerfil}</option>
+                        </c:forEach>
+                    </select>
+                </div>
+
+                <%-- 
+                    ─────────────────────────────────────────────────────
+                    SEÇÃO: ALTERAÇÃO DE SENHA
+                    ─────────────────────────────────────────────────────
+                    Regra de negócio:
+                    - O campo é OPCIONAL. Se deixado em branco, a senha
+                      atual do usuário é mantida no banco sem alteração.
+                    - Se preenchido, a nova senha é criptografada com
+                      BCrypt no Controller antes de persistir.
+                    - A confirmação é validada por JavaScript no front-end,
+                      impedindo o envio em caso de divergência.
+                    ─────────────────────────────────────────────────────
+                --%>
+                <div class="form-section-divider">
+                    <span>Alterar Senha <small>(opcional)</small></span>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nova Senha</label>
+                        <div class="input-senha-wrapper">
+                            <input type="password" name="senha_usu" id="edit_senha_usu"
+                                   class="form-input"
+                                   placeholder="Deixe em branco para não alterar"
+                                   autocomplete="new-password"
+                                   oninput="validarConfirmacaoSenha()">
+                            <button type="button" class="btn-toggle-senha" onclick="toggleSenha('edit_senha_usu', 'icone-senha-edt')" tabindex="-1">
+                                <i id="icone-senha-edt" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirmar Nova Senha</label>
+                        <div class="input-senha-wrapper">
+                            <input type="password" id="edit_confirmar_senha"
+                                   class="form-input"
+                                   placeholder="Repita a nova senha"
+                                   autocomplete="new-password"
+                                   oninput="validarConfirmacaoSenha()">
+                            <button type="button" class="btn-toggle-senha" onclick="toggleSenha('edit_confirmar_senha', 'icone-senha-conf')" tabindex="-1">
+                                <i id="icone-senha-conf" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <!-- Mensagem de erro exibida quando as senhas não coincidem -->
+                        <small id="msg-senha-divergente" class="msg-erro-senha" style="display:none;">
+                            ⚠️ As senhas não coincidem.
+                        </small>
+                    </div>
                 </div>
             </form>
         </div>
@@ -452,8 +589,9 @@
          * @param email Email do usuário
          * @param telefone Telefone do usuário
          * @param endereco Endereço do usuário
+         * @param idPerfil ID do perfil vinculado ao usuário
          */
-        function openModalEditar(id, nome, cpf, email, telefone, endereco) {
+        function openModalEditar(id, nome, cpf, email, telefone, endereco, idPerfil) {
             document.getElementById('edit_id_usu').value = id;
             document.getElementById('edit_nome_usu').value = nome;
             document.getElementById('edit_cpf_usu').value = cpf;
@@ -461,10 +599,77 @@
             document.getElementById('edit_telefone_usu').value = telefone;
             document.getElementById('edit_endereco_usu').value = endereco;
 
+            // ✅ Seleciona o perfil correspondente ao registro do usuário
+            const selectPerfil = document.getElementById('edit_id_perfil');
+            if (selectPerfil && idPerfil) {
+                selectPerfil.value = idPerfil;
+            }
+
             modalEditar.classList.add('show');
         }
 
+        /*
+            ============================================================================
+            TOGGLE MOSTRAR / OCULTAR SENHA
+            Alterna o tipo do input entre "password" e "text"
+            e troca o ícone de olho aberto/fechado.
+            ============================================================================
+        */
+        function toggleSenha(inputId, iconeId) {
+            const input = document.getElementById(inputId);
+            const icone = document.getElementById(iconeId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icone.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icone.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        /*
+            ============================================================================
+            VALIDAÇÃO DE CONFIRMAÇÃO DE SENHA (MODAL EDIÇÃO)
+            ----------------------------------------------------------------------------
+            Regra de negócio:
+            - Campo opcional: se deixado em branco, a senha atual é mantida no banco.
+            - Se preenchido, a confirmação deve ser idêntica à nova senha.
+            - Enquanto divergirem, o botão "Salvar Alterações" fica desabilitado.
+            ============================================================================
+        */
+        function validarConfirmacaoSenha() {
+            const nova        = document.getElementById('edit_senha_usu').value;
+            const confirmacao = document.getElementById('edit_confirmar_senha').value;
+            const msgErro     = document.getElementById('msg-senha-divergente');
+            const btnSalvar   = document.querySelector('button[form="formEditarUsuario"]');
+
+            if (nova === '') {
+                msgErro.style.display = 'none';
+                btnSalvar.disabled    = false;
+                return;
+            }
+
+            if (nova !== confirmacao) {
+                msgErro.style.display = 'inline';
+                btnSalvar.disabled    = true;
+            } else {
+                msgErro.style.display = 'none';
+                btnSalvar.disabled    = false;
+            }
+        }
+
+        /*
+            ============================================================================
+            FECHAR MODAL DE EDIÇÃO
+            Limpa os campos de senha ao fechar para evitar que dados sensíveis
+            fiquem visíveis caso o modal seja reaberto para outro usuário.
+            ============================================================================
+        */
         function closeModalEditar() {
+            document.getElementById('edit_senha_usu').value       = '';
+            document.getElementById('edit_confirmar_senha').value  = '';
+            document.getElementById('msg-senha-divergente').style.display = 'none';
+            document.querySelector('button[form="formEditarUsuario"]').disabled = false;
             modalEditar.classList.remove('show');
         }
 

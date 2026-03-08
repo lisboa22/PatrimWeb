@@ -1,6 +1,7 @@
 package br.com.patrimweb.controller;
 
 import br.com.patrimweb.dao.EquipamentoDAO;
+import br.com.patrimweb.dao.FabricanteDAO;
 import br.com.patrimweb.dao.MovimentacaoDAO;
 import br.com.patrimweb.dao.UnidadeDAO;
 import br.com.patrimweb.model.Equipamento;
@@ -23,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,7 @@ public class DashboardController extends HttpServlet {
     
     // DAOs responsáveis pela comunicação com o banco de dados
     private EquipamentoDAO equipamentoDAO;
+    private FabricanteDAO fabricanteDAO;
     private MovimentacaoDAO movimentacaoDAO;
     private UnidadeDAO unidadeDAO;
     
@@ -66,6 +69,7 @@ public class DashboardController extends HttpServlet {
     public void init() throws ServletException {
         try {
             equipamentoDAO = new EquipamentoDAO(Conexao.getConnection());
+            fabricanteDAO = new FabricanteDAO(Conexao.getConnection());
             movimentacaoDAO = new MovimentacaoDAO(Conexao.getConnection());
             unidadeDAO = new UnidadeDAO(Conexao.getConnection());
         } catch (Exception e) {
@@ -162,6 +166,10 @@ public class DashboardController extends HttpServlet {
         int totalEquipamentos = equipamentos.size();
         request.setAttribute("totalEquipamentos", totalEquipamentos);
         
+        /*List<Fabricante> fabricantes = fabricanteDAO.listarFabricantes();
+        int totalFabricantes = fabricantes.size();
+        request.setAttribute("totalFabricantes", totalFabricantes);*/
+        
         // Busca todas as movimentações e calcula total
         List<Movimentacao> movimentacoes = movimentacaoDAO.listarMovimentacoes();
         int totalMovimentacoes = movimentacoes.size();
@@ -218,9 +226,16 @@ public class DashboardController extends HttpServlet {
         // 4. TABELA - Últimas 10 movimentações
         // ===============================
         // Regra: exibir no máximo 10 registros mais recentes
-        List<Movimentacao> atividadesRecentes = movimentacoes.size() > 10 
-            ? movimentacoes.subList(0, 10) 
-            : movimentacoes;
+        
+     // Ordena decrescente pela data no próprio controller
+        movimentacoes.sort((a, b) -> b.getDataInsercao().compareTo(a.getDataInsercao()));
+        
+        List<Movimentacao> atividadesRecentes =
+        	    new ArrayList<>(
+        	        movimentacoes.size() > 10
+        	            ? movimentacoes.subList(0, 10)
+        	            : movimentacoes
+        	    );
         
         request.setAttribute("atividadesRecentes", atividadesRecentes);
         

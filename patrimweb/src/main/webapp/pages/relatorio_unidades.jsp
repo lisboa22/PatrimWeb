@@ -305,21 +305,53 @@
                 // Orientação paisagem para comportar endereços longos
                 const doc = new jsPDF('l', 'mm', 'a4');
 
-                doc.setFontSize(18);
-                doc.text("Relatório de Unidades - PatrimWeb", 14, 15);
+                const logoImg = new Image();
+                logoImg.src = 'assets/images/logo.png';
 
-                doc.setFontSize(10);
-                doc.text("Gerado em: " + new Date().toLocaleDateString(), 14, 22);
+                const gerarPDF = function() {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width  = logoImg.naturalWidth  || logoImg.width;
+                        canvas.height = logoImg.naturalHeight || logoImg.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(logoImg, 0, 0);
+                        const logoBase64 = canvas.toDataURL('image/png');
 
-                doc.autoTable({
-                    html: '#tabelaRelatorio',
-                    startY: 30,
-                    theme: 'grid',
-                    headStyles: { fillColor: [59, 130, 246] },
-                    styles: { fontSize: 9 }
-                });
+                        const maxLogoWidth  = 40;
+                        const maxLogoHeight = 15;
+                        const ratio  = Math.min(maxLogoWidth / canvas.width, maxLogoHeight / canvas.height);
+                        const logoW  = canvas.width  * ratio;
+                        const logoH  = canvas.height * ratio;
 
-                doc.save('relatorio_unidades.pdf');
+                        doc.addImage(logoBase64, 'PNG', 14, 8, logoW, logoH);
+                    } catch (e) {
+                        console.warn('Não foi possível adicionar o logo ao PDF:', e);
+                    }
+
+                    doc.setFontSize(18);
+                    doc.text("Relatório de Unidades - PatrimWeb", 30, 15);
+
+                    doc.setFontSize(10);
+                    doc.text("Gerado em: " + new Date().toLocaleDateString(), 30, 22);
+
+                    doc.autoTable({
+                        html: '#tabelaRelatorio',
+                        startY: 30,
+                        theme: 'grid',
+                        headStyles: { fillColor: [59, 130, 246] },
+                        styles: { fontSize: 9 }
+                    });
+
+                    doc.save('relatorio_unidades.pdf');
+                };
+
+                if (logoImg.complete && logoImg.naturalWidth > 0) {
+                    gerarPDF();
+                } else {
+                    logoImg.onload  = gerarPDF;
+                    logoImg.onerror = gerarPDF;
+                }
+                return;
             }
             else if (type === 'Excel') {
                 const tabela = document.getElementById('tabelaRelatorio');

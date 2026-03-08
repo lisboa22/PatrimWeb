@@ -33,7 +33,12 @@ public class Equipamento {
      * Nome descritivo do equipamento.
      */
     private String nome_equip;
+    
+    /**
+     * Numero de Série do equipamento.
+     */
 
+    private String num_serie_equip;
     /**
      * Objeto que representa o fabricante associado ao equipamento.
      * Define um relacionamento entre entidades do domínio.
@@ -68,10 +73,11 @@ public class Equipamento {
      * Uso comum:
      * - Reconstrução de objetos vindos do banco de dados (SELECT).
      */
-    public Equipamento(int id_equip, String nome_equip, Fabricante fabricante, 
+    public Equipamento(int id_equip, String nome_equip, String num_serie_equip, Fabricante fabricante, 
                        Timestamp data_insercao) {
         this.id_equip = id_equip;
         this.nome_equip = nome_equip;
+        this.num_serie_equip = num_serie_equip;
         this.fabricante = fabricante;
         this.data_insercao = data_insercao;
     }
@@ -88,9 +94,10 @@ public class Equipamento {
      * - Operações intermediárias onde a data é definida posteriormente
      *   pelo sistema ou banco de dados.
      */
-    public Equipamento(int id_equip, String nome_equip, Fabricante fabricante) {
+    public Equipamento(int id_equip, String nome_equip, String num_serie_equip, Fabricante fabricante) {
         this.id_equip = id_equip;
         this.nome_equip = nome_equip;
+        this.num_serie_equip = num_serie_equip;
         this.fabricante = fabricante;
     }
     
@@ -105,8 +112,9 @@ public class Equipamento {
      * - O ID não é informado pois normalmente é gerado automaticamente
      *   pelo banco de dados (auto increment).
      */
-    public Equipamento(String nome_equip, Fabricante fabricante, Timestamp data_insercao) {
+    public Equipamento(String nome_equip, String num_serie_equip, Fabricante fabricante, Timestamp data_insercao) {
         this.nome_equip = nome_equip;
+        this.num_serie_equip = num_serie_equip;
         this.fabricante = fabricante;
         this.data_insercao = data_insercao;
     }
@@ -133,6 +141,8 @@ public class Equipamento {
         this.id_equip = id_equip;
     }
     
+    
+    
     /**
      * Retorna o nome do equipamento.
      *
@@ -153,6 +163,28 @@ public class Equipamento {
      */
     public void setNomeEquip(String nome_equip) {
         this.nome_equip = nome_equip;
+    }
+    
+    /**
+     * Retorna o nome do equipamento.
+     *
+     * @return nome_equip Nome descritivo do equipamento.
+     */
+    public String getNumSerieEquip() {
+        return num_serie_equip;
+    }
+    
+    /**
+     * Define o nome do equipamento.
+     *
+     * @param nome_equip Nome a ser atribuído ao equipamento.
+     *
+     * Regra implícita:
+     * - Espera-se que o nome represente de forma clara o equipamento
+     *   para identificação no sistema.
+     */
+    public void setNumSerieEquip(String num_serie_equip) {
+        this.num_serie_equip = num_serie_equip;
     }
     
     /**

@@ -313,24 +313,56 @@
             if (type === 'PDF') {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                
-                doc.setFontSize(18);
-                doc.text("Relatório de Fabricantes - PatrimWeb", 14, 15);
 
-                doc.setFontSize(10);
-                doc.text("Gerado em: " + new Date().toLocaleDateString(), 14, 22);
+                const logoImg = new Image();
+                logoImg.src = 'assets/images/logo.png';
 
-                // Geração automática da tabela a partir do HTML
-                doc.autoTable({ 
-                    html: '#tabelaRelatorio',
-                    startY: 30,
-                    theme: 'grid',
-                    headStyles: { fillColor: [59, 130, 246] },
-                    styles: { fontSize: 10 }
-                });
+                const gerarPDF = function() {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width  = logoImg.naturalWidth  || logoImg.width;
+                        canvas.height = logoImg.naturalHeight || logoImg.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(logoImg, 0, 0);
+                        const logoBase64 = canvas.toDataURL('image/png');
 
-                // Salva arquivo localmente
-                doc.save('relatorio_fabricantes.pdf');
+                        const maxLogoWidth  = 40;
+                        const maxLogoHeight = 15;
+                        const ratio  = Math.min(maxLogoWidth / canvas.width, maxLogoHeight / canvas.height);
+                        const logoW  = canvas.width  * ratio;
+                        const logoH  = canvas.height * ratio;
+
+                        doc.addImage(logoBase64, 'PNG', 14, 8, logoW, logoH);
+                    } catch (e) {
+                        console.warn('Não foi possível adicionar o logo ao PDF:', e);
+                    }
+                    
+                    doc.setFontSize(18);
+                    doc.text("Relatório de Fabricantes - PatrimWeb", 30, 15);
+
+                    doc.setFontSize(10);
+                    doc.text("Gerado em: " + new Date().toLocaleDateString(), 30, 22);
+
+                    // Geração automática da tabela a partir do HTML
+                    doc.autoTable({ 
+                        html: '#tabelaRelatorio',
+                        startY: 30,
+                        theme: 'grid',
+                        headStyles: { fillColor: [59, 130, 246] },
+                        styles: { fontSize: 10 }
+                    });
+
+                    // Salva arquivo localmente
+                    doc.save('relatorio_fabricantes.pdf');
+                };
+
+                if (logoImg.complete && logoImg.naturalWidth > 0) {
+                    gerarPDF();
+                } else {
+                    logoImg.onload  = gerarPDF;
+                    logoImg.onerror = gerarPDF;
+                }
+                return;
             }
 
             // Exportação para Excel

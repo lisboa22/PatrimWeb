@@ -82,10 +82,19 @@
         <%--
             Acesso ao gerenciamento de usuários do sistema.
             Controller responsável: UsuarioController.
+
+            CONTROLE DE ACESSO:
+            O item só é exibido para usuários com perfil ADMINISTRADOR.
+            Isso evita que links indevidos apareçam para outros perfis,
+            complementando a proteção já existente no UsuarioController.
         --%>
-        <a href="${pageContext.request.contextPath}/UsuarioController" class="nav-item ${pageTitle == 'Usuários' ? 'active' : ''}">
-            <i class="fa-solid fa-users"></i> Usuários
-        </a>
+        <c:if test="${not empty sessionScope.usuarioLogado
+                      and not empty sessionScope.usuarioLogado.perfilUsu
+                      and sessionScope.usuarioLogado.perfilUsu.nomePerfil eq 'ADMINISTRADOR'}">
+            <a href="${pageContext.request.contextPath}/UsuarioController" class="nav-item ${pageTitle == 'Usuários' ? 'active' : ''}">
+                <i class="fa-solid fa-users"></i> Usuários
+            </a>
+        </c:if>
 
         <%--
             Acesso ao cadastro e gerenciamento de unidades
@@ -113,6 +122,41 @@
         <a href="${pageContext.request.contextPath}/MovimentacaoController" class="nav-item ${pageTitle == 'Movimentações' ? 'active' : ''}">
             <i class="fa-solid fa-truck-moving"></i> Movimentações
         </a>
+        
+        <%--
+            ─────────────────────────────────────────────────────
+            SEÇÃO ADMINISTRATIVA — visível apenas para ADMINISTRADOR
+            ─────────────────────────────────────────────────────
+            Agrupa módulos de configuração e controle de acesso:
+            Perfis, Permissões e Configurações do sistema.
+        --%>
+        <c:if test="${not empty sessionScope.usuarioLogado
+                      and not empty sessionScope.usuarioLogado.perfilUsu
+                      and sessionScope.usuarioLogado.perfilUsu.nomePerfil eq 'ADMINISTRADOR'}">
+
+            <!-- <div class="nav-section-label">Administração</div> -->
+
+            <a href="${pageContext.request.contextPath}/PerfilController" class="nav-item ${pageTitle == 'Perfis' ? 'active' : ''}">
+                <i class="fa-solid fa-shield-halved"></i> Perfis
+            </a>
+
+            <a href="${pageContext.request.contextPath}/PermissaoController" class="nav-item ${pageTitle == 'Permissões' ? 'active' : ''}">
+                <i class="fa-solid fa-key"></i> Permissões
+            </a>
+
+            <%--
+                Acesso ao módulo de Configurações do sistema.
+
+                CONTROLE DE ACESSO:
+                Visível exclusivamente para usuários com perfil ADMINISTRADOR.
+                Permite gerenciamento de perfil do usuário e parâmetros do sistema.
+                Controller responsável: ConfiguracaoController.
+            --%>
+            <a href="${pageContext.request.contextPath}/ConfiguracaoController" class="nav-item ${pageTitle == 'Configurações' ? 'active' : ''}">
+                <i class="fa-solid fa-gear"></i> Configurações
+            </a>
+
+        </c:if>
     </ul>
 </aside>
 

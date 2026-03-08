@@ -157,7 +157,8 @@
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#ID</th>
-                                <th>Equipamento</th>
+                                <th>Equipamento/Número Série</th>
+                                <th>Fabricante</th>
                                 <th>Tipo</th>
                                 <th>Origem &rarr; Destino</th>
                                 <th>Libração &rarr; Recepção</th>
@@ -178,7 +179,8 @@
                                 	
                                     <!-- Dados da movimentação -->
                                     <td>${m.idMov}</td>
-                                    <td>${m.equipamento.nomeEquip}</td>
+                                    <td>${m.equipamento.nomeEquip} &rarr; ${m.equipamento.numSerieEquip}</td>
+                                    <td>${m.fabricante.nomeFab}</td>
                                     <td>${m.tipoMovimentacaoMov}</td>
 
                                     <!-- Regra de visualização:
@@ -245,20 +247,20 @@
 
                         <!-- Lista de equipamentos carregada do backend -->
                         <div class="form-group full-width">
-                            <label class="form-label">Equipamento</label>
+                            <label class="form-label">Equipamento - Número Série</label>
                             <select name="id_equip" class="form-input" required>
                                 <option value="">Selecione...</option>
                                 <c:forEach var="e" items="${equipamentos}">
-                                    <option value="${e.idEquip}">${e.nomeEquip}</option>
+                                    <option value="${e.idEquip}">${e.nomeEquip} - ${e.numSerieEquip}</option>
                                 </c:forEach>
                             </select>
                         </div>
 
-                        <!-- Número de série -->
+                        <!-- Número de série 
                         <div class="form-group full-width">
 	                        <label class="form-label">Número de Série</label>
 	                        <input type="text" name="numero_serie" class="form-input" placeholder="Ex: A258M3583" required>
-	                    </div>
+	                    </div>-->
 
                         <!-- Tipo de movimentação -->
                         <div class="form-group full-width">
@@ -266,8 +268,9 @@
                             <select name="tipo_movimentacao" class="form-input" required>
                             	<option value="">Selecione...</option>
                                 <option value="Transferencia">Transferência</option>
+                                <option value="Transferencia">Empréstimo</option>
                                 <option value="Manutencao">Manutenção</option>
-                                <option value="Baixa">Baixa</option>
+                                <option value="Baixa">Devolução</option>
                             </select>
                         </div>
 
@@ -353,16 +356,14 @@
                     <input type="hidden" name="action" value="editar">
                     <input type="hidden" name="edt_id_mov" id="edit_id_mov">
 
-                    <p>Total de </p>
-
                     <div class="form-grid">
 
                         <!-- Equipamento -->
                         <div class="form-group full-width">
-                            <label class="form-label">Equipamento</label>
+                            <label class="form-label">Equipamento - Número Série</label>
                             <select name="id_equip" id="edit_id_equipamento" class="form-input" required>
                                 <c:forEach var="e" items="${equipamentos}">
-                                    <option value="${e.idEquip}">${e.nomeEquip}</option>
+                                    <option value="${e.idEquip}">${e.nomeEquip} - ${e.numSerieEquip}</option>
                                 </c:forEach>
                             </select>
                         </div>
@@ -372,12 +373,13 @@
                             <label class="form-label">Tipo de Movimentação</label>
                             <select name="tipo_movimentacao" id="edit_tipo_mov" class="form-input" required>
                             	<option value="">Selecione...</option>
-                                <option value="Transferencia">Transferência</option>
-                                <option value="Manutencao">Manutenção</option>
-                                <option value="Baixa">Baixa</option>
+                                <option value="Transferência">Transferência</option>
+                                <option value="Empréstimo">Empréstimo</option>
+                                <option value="Manutenção">Manutenção</option>
+                                <option value="Devolução">Devolução</option>
                             </select>
                         </div>
-                    </div>
+                    
 
                     <!-- Unidades e usuários -->
                     <div class="form-group">
@@ -424,6 +426,7 @@
                     <div class="form-group full-width">
                         <label class="form-label">Observação</label>
                         <textarea name="observacao" id="edit_obs" class="form-input"></textarea>
+                    </div>
                     </div>
                     </div>
                 </form>

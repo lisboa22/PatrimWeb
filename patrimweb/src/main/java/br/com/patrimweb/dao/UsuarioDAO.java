@@ -1,8 +1,6 @@
 package br.com.patrimweb.dao;
 
-//import java.io.IOException;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -12,20 +10,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/*import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;*/
-
+import br.com.patrimweb.model.Fabricante;
+import br.com.patrimweb.model.Perfil;
 import br.com.patrimweb.model.Usuario;
 import br.com.patrimweb.utils.Conexao;
+import br.com.patrimweb.utils.SenhaUtils; // ✅ Import da classe utilitária de criptografia
 
 /**
  * DAO responsável pelas operações de persistência da entidade Usuario.
@@ -36,18 +25,19 @@ import br.com.patrimweb.utils.Conexao;
  *
  * Responsabilidades:
  * - Inserir, atualizar, remover e consultar usuários
- * - Realizar autenticação baseada em login/senha
+ * - Realizar autenticação baseada em login/senha com verificação BCrypt
  * - Executar filtros dinâmicos para relatórios
  * - Fornecer dados agregados para gráficos e análises
  *
  * Observações importantes:
  * - Utiliza PreparedStatement para segurança contra SQL Injection.
+ * - Senhas são armazenadas como hash BCrypt — nunca em texto puro.
  * - A conexão é fornecida externamente e não é gerenciada pela classe,
  *   exceto em métodos específicos que solicitam nova conexão.
  */
 public class UsuarioDAO {
 
-	private Connection conexao; //Declaração de um atributo conexao do tipo Connection, que será usado para interagir com o banco de dados.
+	private Connection conexao;
 
 	 /**
 	  * Construtor responsável por receber uma conexão ativa com o banco.
@@ -62,20 +52,20 @@ public class UsuarioDAO {
 	  * Insere um novo usuário na base de dados.
 	  *
 	  * Regras de negócio:
-	  * - Todos os campos necessários devem estar preenchidos no objeto Usuario.
+	  * - A senha deve ser criptografada ANTES de chamar este método.
+	  *   A criptografia é responsabilidade da camada Controller (UsuarioController).
 	  * - A data de inserção é definida pela camada superior da aplicação.
 	  *
 	  * Interação com banco:
 	  * - Executa comando INSERT na tabela usuario.
 	  *
-	  * @param usuario objeto contendo os dados do usuário
+	  * @param usuario objeto contendo os dados do usuário (senha já criptografada)
 	  * @throws Exception em caso de erro durante execução SQL
 	  */
 	 public void adicionarUsuario(Usuario usuario) throws Exception {
-		 String sql = "INSERT INTO usuario (nome_usu, cpf_usu, telefone_usu, email_usu, endereco_usu, data_insercao, login_google, senha_usu) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		 String sql = "INSERT INTO usuario (nome_usu, cpf_usu, telefone_usu, email_usu, endereco_usu, data_insercao, login_google, senha_usu, id_perfil) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		 PreparedStatement stmt = conexao.prepareStatement(sql);
 
-		 // Associação dos parâmetros SQL aos atributos da entidade
 		 stmt.setString(1, usuario.getNomeUsu());
 	     stmt.setString(2, usuario.getCpfUsu());
 	     stmt.setString(3, usuario.getTelefoneUsu());
@@ -83,9 +73,9 @@ public class UsuarioDAO {
 	     stmt.setString(5, usuario.getEnderecoUsu());
 	     stmt.setTimestamp(6, usuario.getDataInsercao());
 	     stmt.setBoolean(7, usuario.getLoginGoogle());
-	     stmt.setString(8, usuario.getSenhaUsu());
+	     stmt.setString(8, usuario.getSenhaUsu()); // Senha já chega criptografada do Controller
+	     stmt.setInt(9, usuario.getPerfilUsu().getIdPerfil()); // ✅ FK do perfil selecionado
 
-	     // Executa inserção no banco
 	     stmt.executeUpdate();
 	     stmt.close();
 	 }
@@ -93,22 +83,30 @@ public class UsuarioDAO {
 	 /**
 	  * Recupera todos os usuários cadastrados.
 	  *
-	  * Estrutura relevante:
-	  * - Loop percorre o ResultSet convertendo cada registro em objeto Usuario.
-	  *
 	  * @return lista contendo todos os usuários
 	  * @throws Exception em caso de erro de acesso ao banco
 	  */
 	 public List<Usuario> listarUsuarios() throws Exception {
 	     List<Usuario> usuarios = new ArrayList<>();
-	     String sql = "SELECT * FROM usuario";
+	     String sql = "SELECT u.*, "
+	                + " p.id              AS id_perfil, "
+	                + " p.nome            AS nome_perfil "
+	                + "FROM usuario u "
+	                + "JOIN perfil p      ON p.id = u.id_perfil "
+	                + "ORDER BY u.id_usu";
+	     
+	     //String sql = "SELECT * FROM usuario";
 	     PreparedStatement stmt = conexao.prepareStatement(sql);
 	     ResultSet rs = stmt.executeQuery();
 
-	     // Percorre todos os registros retornados
 	     while (rs.next()) {
-
-	    	 // Mapeamento linha do banco → objeto de domínio
+	    	 
+	    	 Perfil perfil = new Perfil();
+		     
+	    	 perfil.setIdPerfil(rs.getInt("id_perfil"));
+	    	 
+	    	 perfil.setNomePerfil(rs.getString("nome_perfil"));
+	    	 
 	    	 Usuario usuario = new Usuario(
 	    		 rs.getInt("id_usu"),
 	    		 rs.getString("nome_usu"),
@@ -118,12 +116,12 @@ public class UsuarioDAO {
 	    		 rs.getString("endereco_usu"),
 	    		 rs.getTimestamp("data_insercao"),
 	    		 rs.getBoolean("login_google"),
-	    		 rs.getString("senha_usu")
+	    		 rs.getString("senha_usu"),
+	    		 perfil
 	    	 );
-
 	    	 usuarios.add(usuario);
 	     }
-
+	     
 	     rs.close();
 	     stmt.close();
 	     return usuarios;
@@ -140,7 +138,8 @@ public class UsuarioDAO {
 	  * @throws Exception em caso de erro SQL
 	  */
 	 public void alterarUsuarios(Usuario usuario) throws Exception {
-		 String sql = "UPDATE usuario SET nome_usu = ?, cpf_usu = ?, telefone_usu = ?, email_usu = ?, endereco_usu = ? WHERE id_usu = ?";
+		 // ✅ senha_usu e id_perfil incluídos no UPDATE
+		 String sql = "UPDATE usuario SET nome_usu = ?, cpf_usu = ?, telefone_usu = ?, email_usu = ?, endereco_usu = ?, senha_usu = ?, id_perfil = ? WHERE id_usu = ?";
 		 PreparedStatement stmt = conexao.prepareStatement(sql);
 
 		 stmt.setString(1, usuario.getNomeUsu());
@@ -148,7 +147,9 @@ public class UsuarioDAO {
 	     stmt.setString(3, usuario.getTelefoneUsu());
 	     stmt.setString(4, usuario.getEmailUsu());
 	     stmt.setString(5, usuario.getEnderecoUsu());
-	     stmt.setInt(6, usuario.getIdUsu());
+	     stmt.setString(6, usuario.getSenhaUsu()); // ✅ hash BCrypt vindo do Controller
+	     stmt.setInt(7, usuario.getPerfilUsu().getIdPerfil()); // ✅ FK do perfil selecionado
+	     stmt.setInt(8, usuario.getIdUsu());
 
 	     stmt.executeUpdate();
 	     stmt.close();
@@ -163,35 +164,32 @@ public class UsuarioDAO {
 	 public void excluirUsuario(int id) throws Exception {
 		 String sql = "DELETE FROM usuario WHERE id_usu = ?";
 	     PreparedStatement stmt = conexao.prepareStatement(sql);
-
 	     stmt.setInt(1, id);
-
 	     stmt.executeUpdate();
 	     stmt.close();
 	 }
-	 
+
 	/**
 	 * Busca um usuário específico pelo ID.
-	 *
-	 * Estrutura de decisão:
-	 * - O objeto só é criado se houver resultado no banco.
 	 *
 	 * @param id identificador do usuário
 	 * @return Usuario encontrado ou null caso não exista
 	 * @throws Exception em caso de erro SQL
 	 */
 	 public Usuario buscarPorId(int id) throws Exception {
-
 	     Usuario usuario = null;
-
-	     String sql = "SELECT * FROM usuario WHERE id_usu = ?";
+	     String sql = "SELECT u.*, p.id AS id_perfil, p.nome AS nome_perfil "
+	                + "FROM usuario u "
+	                + "JOIN perfil p ON p.id = u.id_perfil "
+	                + "WHERE u.id_usu = ?";
 	     PreparedStatement stmt = conexao.prepareStatement(sql);
-
 	     stmt.setInt(1, id);
 	     ResultSet rs = stmt.executeQuery();
 
-	     // Verifica existência de registro retornado
 	     if (rs.next()) {
+	    	 Perfil perfil = new Perfil();
+	    	 perfil.setIdPerfil(rs.getInt("id_perfil"));
+	    	 perfil.setNomePerfil(rs.getString("nome_perfil"));
 
 	         usuario = new Usuario(
 	             rs.getInt("id_usu"),
@@ -202,37 +200,32 @@ public class UsuarioDAO {
 	             rs.getString("endereco_usu"),
 	             rs.getTimestamp("data_insercao"),
 	             rs.getBoolean("login_google"),
-	             rs.getString("senha_usu")
+	             rs.getString("senha_usu"),
+	             perfil
 	         );
 	     }
 
+	     rs.close();
+	     stmt.close();
 	     return usuario;
 	 }
-	 
+
 	 /**
 	  * Busca usuário pelo e-mail.
-	  *
-	  * Regra de negócio:
-	  * - Utilizado principalmente para validação de login social ou verificação
-	  *   de existência de conta.
 	  *
 	  * @param email e-mail do usuário
 	  * @return Usuario encontrado ou null
 	  */
 	 public Usuario buscarPorEmail(String email) {
-
 		    String sql = "SELECT * FROM usuario WHERE email_usu = ?";
 		    Usuario usuario = null;
 
 		    try (PreparedStatement ps = conexao.prepareStatement(sql)) {
-
 		        ps.setString(1, email);
 		        ResultSet rs = ps.executeQuery();
 
 		        if (rs.next()) {
 		            usuario = new Usuario();
-
-		            // Mapeamento parcial dos dados necessários
 		            usuario.setIdUsu(rs.getInt("id_usu"));
 		            usuario.setNomeUsu(rs.getString("nome_usu"));
 		            usuario.setEmailUsu(rs.getString("email_usu"));
@@ -245,58 +238,65 @@ public class UsuarioDAO {
 
 		    return usuario;
 		}
-	 
+
 	 /**
-	  * Realiza autenticação do usuário.
+	  * Realiza autenticação do usuário com verificação BCrypt.
 	  *
-	  * Regra de negócio:
-	  * - Permite login utilizando email OU nome de usuário.
-	  * - A validação ocorre comparando diretamente a senha armazenada.
+	  * Fluxo de autenticação:
+	  * 1. Busca o usuário no banco pelo login (email OU nome).
+	  *    IMPORTANTE: A senha NÃO é mais comparada diretamente no SQL,
+	  *    pois o banco armazena um hash BCrypt, não a senha em texto puro.
+	  * 2. Se o usuário for encontrado, utiliza SenhaUtils.verificar()
+	  *    para comparar a senha digitada com o hash armazenado no banco.
+	  * 3. Retorna o objeto Usuario apenas se a verificação for bem-sucedida.
 	  *
-	  * Ponto crítico:
-	  * - A autenticação depende da correspondência exata da senha.
+	  * Por que a senha saiu do SQL?
+	  * - BCrypt gera um hash diferente a cada vez, mesmo para a mesma senha.
+	  * - Por isso, não é possível comparar hashes diretamente no banco.
+	  * - A verificação deve ser feita em Java, via BCrypt.checkpw().
 	  *
 	  * @param login email ou nome do usuário
-	  * @param senha senha informada
-	  * @return Usuario autenticado ou null caso inválido
+	  * @param senhaDigitada senha informada pelo usuário no formulário de login
+	  * @return Usuario autenticado ou null caso as credenciais sejam inválidas
 	  */
-	 public Usuario autenticar(String login, String senha) {
+	 public Usuario autenticar(String login, String senhaDigitada) {
 
+		    // ✅ Busca apenas pelo login — a senha será verificada em Java via BCrypt
 		    String sql = "SELECT * FROM usuario " +
-		                 "WHERE (email_usu = ? OR nome_usu = ?) " +
-		                 "AND senha_usu = ?";
+		                 "WHERE (email_usu = ? OR nome_usu = ?)";
 
 		    try (PreparedStatement ps = conexao.prepareStatement(sql)) {
 
 		        ps.setString(1, login);
 		        ps.setString(2, login);
-		        ps.setString(3, senha);
 
 		        ResultSet rs = ps.executeQuery();
 
 		        if (rs.next()) {
-		            Usuario usuario = new Usuario();
+		            String hashArmazenado = rs.getString("senha_usu");
 
-		            usuario.setIdUsu(rs.getInt("id_usu"));
-		            usuario.setNomeUsu(rs.getString("nome_usu"));
-		            usuario.setEmailUsu(rs.getString("email_usu"));
-		            usuario.setLoginGoogle(rs.getBoolean("login_google"));
-		            return usuario;
+		            // ✅ Verificação BCrypt: compara senha digitada com o hash do banco
+		            if (SenhaUtils.verificar(senhaDigitada, hashArmazenado)) {
+
+		                Usuario usuario = new Usuario();
+		                usuario.setIdUsu(rs.getInt("id_usu"));
+		                usuario.setNomeUsu(rs.getString("nome_usu"));
+		                usuario.setEmailUsu(rs.getString("email_usu"));
+		                usuario.setLoginGoogle(rs.getBoolean("login_google"));
+		                return usuario;
+		            }
 		        }
 
 		    } catch (SQLException e) {
 		        throw new RuntimeException("Erro ao autenticar usuário", e);
 		    }
 
+		    // ❌ Credenciais inválidas — usuário não encontrado ou senha incorreta
 		    return null;
 		}
 
 	 /**
 	  * Filtra usuários dinamicamente conforme critérios opcionais.
-	  *
-	  * Regras de negócio:
-	  * - Apenas filtros informados são adicionados à query.
-	  * - Uso de WHERE 1=1 simplifica concatenação dinâmica.
 	  *
 	  * @param dataInicio data mínima de cadastro
 	  * @param dataFim data máxima de cadastro
@@ -314,48 +314,35 @@ public class UsuarioDAO {
 
 		    List<Usuario> lista = new ArrayList<>();
 
+		    // ✅ JOIN com perfil obrigatório — id_perfil e nome_perfil precisam
+		    //    constar no ResultSet para popular o objeto Perfil dentro de Usuario
 		    StringBuilder sql = new StringBuilder();
-		    sql.append("SELECT * FROM usuario WHERE 1=1 ");
+		    sql.append("SELECT u.*, p.id AS id_perfil, p.nome AS nome_perfil ");
+		    sql.append("FROM usuario u ");
+		    sql.append("JOIN perfil p ON p.id = u.id_perfil ");
+		    sql.append("WHERE 1=1 ");
 
-		    if (dataInicio != null) {
-		        sql.append(" AND data_insercao >= ? ");
-		    }
-
-		    if (dataFim != null) {
-		        sql.append(" AND data_insercao <= ? ");
-		    }
-
-		    if (nome != null && !nome.trim().isEmpty()) {
-		        sql.append(" AND nome_usu LIKE ? ");
-		    }
-
-		    if (cpf != null && !cpf.trim().isEmpty()) {
-		        sql.append(" AND cpf_usu LIKE ? ");
-		    }
+		    if (dataInicio != null) sql.append(" AND u.data_insercao >= ? ");
+		    if (dataFim != null)    sql.append(" AND u.data_insercao <= ? ");
+		    if (nome != null && !nome.trim().isEmpty()) sql.append(" AND u.nome_usu LIKE ? ");
+		    if (cpf  != null && !cpf.trim().isEmpty())  sql.append(" AND u.cpf_usu LIKE ? ");
 
 		    PreparedStatement stmt = conexao.prepareStatement(sql.toString());
 		    int index = 1;
 
-		    // Associação dinâmica dos parâmetros conforme filtros aplicados
-		    if (dataInicio != null) {
-		        stmt.setTimestamp(index++, dataInicio);
-		    }
-
-		    if (dataFim != null) {
-		        stmt.setTimestamp(index++, dataFim);
-		    }
-
-		    if (nome != null && !nome.trim().isEmpty()) {
-		        stmt.setString(index++, "%" + nome.trim() + "%");
-		    }
-
-		    if (cpf != null && !cpf.trim().isEmpty()) {
-		        stmt.setString(index++, "%" + cpf.trim() + "%");
-		    }
+		    if (dataInicio != null) stmt.setTimestamp(index++, dataInicio);
+		    if (dataFim != null)    stmt.setTimestamp(index++, dataFim);
+		    if (nome != null && !nome.trim().isEmpty()) stmt.setString(index++, "%" + nome.trim() + "%");
+		    if (cpf  != null && !cpf.trim().isEmpty())  stmt.setString(index++, "%" + cpf.trim() + "%");
 
 		    ResultSet rs = stmt.executeQuery();
 
 		    while (rs.next()) {
+
+		        Perfil perfil = new Perfil();
+		        perfil.setIdPerfil(rs.getInt("id_perfil"));
+		        perfil.setNomePerfil(rs.getString("nome_perfil"));
+
 		        Usuario usuario = new Usuario(
 		            rs.getInt("id_usu"),
 		            rs.getString("nome_usu"),
@@ -365,17 +352,17 @@ public class UsuarioDAO {
 		            rs.getString("endereco_usu"),
 		            rs.getTimestamp("data_insercao"),
 		            rs.getBoolean("login_google"),
-		            rs.getString("senha_usu")
+		            rs.getString("senha_usu"),
+		            perfil
 		        );
 		        lista.add(usuario);
 		    }
 
 		    rs.close();
 		    stmt.close();
-
 		    return lista;
 		}
-	 
+
 	 /**
 	  * Retorna anos distintos de cadastro de usuários.
 	  *
@@ -383,9 +370,7 @@ public class UsuarioDAO {
 	  * @throws Exception em caso de erro SQL
 	  */
 	 public List<Integer> listarAnosCadastro() throws Exception {
-
 		    List<Integer> anos = new ArrayList<>();
-
 		    String sql = """
 		        SELECT DISTINCT YEAR(data_insercao) AS ano
 		        FROM usuario
@@ -393,30 +378,28 @@ public class UsuarioDAO {
 		        AND YEAR(data_insercao) > 0
 		        ORDER BY ano DESC
 		    """;
-
 		    PreparedStatement stmt = conexao.prepareStatement(sql);
 		    ResultSet rs = stmt.executeQuery();
-
-		    while (rs.next()) {
-		        anos.add(rs.getInt("ano"));
-		    }
-
+		    while (rs.next()) anos.add(rs.getInt("ano"));
 		    rs.close();
 		    stmt.close();
-
 		    return anos;
 		}
 
 	 /**
 	  * Retorna quantidade de usuários cadastrados por mês em um ano específico.
+	  * Aceita Integer para evitar NullPointerException quando anoSelecionado for null
+	  * (situação que ocorre quando não há nenhum cadastro ainda no banco).
 	  *
-	  * @param ano ano utilizado como filtro estatístico
-	  * @return mapa contendo mês → total de usuários
+	  * @param ano ano utilizado como filtro estatístico (pode ser null)
+	  * @return mapa contendo mês → total de usuários, vazio se ano for null
 	  * @throws Exception em caso de erro SQL
 	  */
-	 public Map<Integer, Integer> quantidadeUsuariosPorMes(int ano) throws Exception {
-
+	 public Map<Integer, Integer> quantidadeUsuariosPorMes(Integer ano) throws Exception {
 		    Map<Integer, Integer> dados = new LinkedHashMap<>();
+
+		    // ✅ Proteção contra null: retorna mapa vazio sem consultar o banco
+		    if (ano == null) return dados;
 
 		    String sql = """
 		        SELECT 
@@ -428,31 +411,17 @@ public class UsuarioDAO {
 		        GROUP BY MONTH(data_insercao)
 		        ORDER BY mes
 		    """;
-
 		    PreparedStatement stmt = conexao.prepareStatement(sql);
 		    stmt.setInt(1, ano);
-
 		    ResultSet rs = stmt.executeQuery();
-
-		    while (rs.next()) {
-		        dados.put(
-		            rs.getInt("mes"),
-		            rs.getInt("total")
-		        );
-		    }
-
+		    while (rs.next()) dados.put(rs.getInt("mes"), rs.getInt("total"));
 		    rs.close();
 		    stmt.close();
-
 		    return dados;
 		}
 
 	 /**
 	  * Conta o total de usuários cadastrados em determinado ano.
-	  *
-	  * Interação com banco:
-	  * - Abre nova conexão utilizando classe utilitária Conexao.
-	  * - Executa consulta agregada COUNT(*).
 	  *
 	  * @param ano ano desejado
 	  * @return total de usuários cadastrados
@@ -460,31 +429,19 @@ public class UsuarioDAO {
 	  */
 	 public int contarUsuariosPorAno(int ano) throws SQLException {
 	        int total = 0;
-	        
 	        Connection conn = Conexao.getConnection();
-	        
-	        UsuarioDAO usuarioDAO = new UsuarioDAO(conn);
-
 	        String sql = """
 	            SELECT COUNT(*) 
 	            FROM usuarios 
 	            WHERE YEAR(data_cadastro) = ?
 	        """;
-	        
 	        try (PreparedStatement ps = conn.prepareStatement(sql)) {
 	            ps.setInt(1, ano);
-
 	            ResultSet rs = ps.executeQuery();
-
-	            // Estrutura de decisão que valida retorno da consulta
-	            if (rs.next()) {
-	                total = rs.getInt(1);
-	            }
-
+	            if (rs.next()) total = rs.getInt(1);
 	        } catch (SQLException e) {
 	            e.printStackTrace();
 	        }
-
 	        System.out.println("Total: " + total);
 	        return total;
 	    }

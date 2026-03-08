@@ -125,6 +125,7 @@
                         <tr>
                             <th style="width: 80px;">#ID</th>
                             <th>Nome do Equipamento</th>
+                            <th>Numero de Série</th>
                             <th>Fabricante</th>
                             <th>Data Inserção</th>
                             <th style="text-align: center;">Ações</th>
@@ -140,6 +141,7 @@
                             <tr>
                                 <td>${e.idEquip}</td>
                                 <td>${e.nomeEquip}</td>
+                                <td>${e.numSerieEquip}</td>
                                 <td>${e.fabricante.nomeFab}</td>
 
                                 <!-- Formatação de data no padrão brasileiro -->
@@ -156,7 +158,7 @@
                                         Observação: os dados são passados como parâmetros JavaScript.
                                     -->
                                     <button class="btn-icon" title="Editar" 
-                                        onclick="openModalEditar('${e.idEquip}', '${e.nomeEquip}', '${e.fabricante.idFab}')">
+                                        onclick="openModalEditar('${e.idEquip}', '${e.nomeEquip}', '${e.numSerieEquip}', '${e.fabricante.idFab}')">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
 
@@ -199,6 +201,8 @@
                 <div class="form-group full-width">
                     <label class="form-label">Nome do Equipamento</label>
                     <input type="text" name="nome_equip" class="form-input" placeholder="Ex: Notebook Dell Inspiron" required>
+                    <label class="form-label">Número de Série</label>
+                    <input type="text" name="numero_equip" class="form-input" placeholder="Ex: NZ582564XE" required>
                 </div>
 
                 <!-- Seleção de fabricante -->
@@ -244,6 +248,8 @@
                 <div class="form-group full-width">
                     <label class="form-label">Nome do Equipamento</label>
                     <input type="text" name="nome_equip" id="edit_nome_equip" class="form-input" required>
+                    <label class="form-label">Número de Série</label>
+                    <input type="text" name="numero_equip" id="edit_numero_equip" class="form-input" placeholder="Ex: NZ582564XE" required>
                 </div>
 
                 <!-- Select preenchido dinamicamente -->
@@ -285,9 +291,10 @@
         - nome: nome atual do equipamento
         - idFabricante: fabricante vinculado
     */
-    function openModalEditar(id, nome, idFabricante) {
+    function openModalEditar(id, nome, numero, idFabricante) {
         document.getElementById('edit_id_equip').value = id;
         document.getElementById('edit_nome_equip').value = nome;
+        document.getElementById('edit_numero_equip').value = numero;
         document.getElementById('edit_id_fabricante').value = idFabricante;
         modalEditar.classList.add('show');
     }

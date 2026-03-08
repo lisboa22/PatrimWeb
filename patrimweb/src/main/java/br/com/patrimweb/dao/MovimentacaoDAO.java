@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import br.com.patrimweb.model.Equipamento;
+import br.com.patrimweb.model.Fabricante;
 import br.com.patrimweb.model.Movimentacao;
 import br.com.patrimweb.model.Unidade;
 import br.com.patrimweb.model.Usuario;
@@ -65,22 +66,21 @@ public class MovimentacaoDAO {
      * @throws Exception erro durante operação SQL.
      */
     public void adicionarMovimentacao(Movimentacao movimentacao) throws Exception {
-        String sql = "INSERT INTO movimentacao (equipamento, numero_serie, tipo_movimentacao, "
+        String sql = "INSERT INTO movimentacao (equipamento, tipo_movimentacao, "
                    + "unidade_origem, usuario_origem, unidade_destino, usuario_destino, "
-                   + "observacao, data_insercao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "observacao, data_insercao) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         PreparedStatement stmt = conexao.prepareStatement(sql);
 
         // Associação dos atributos do objeto aos parâmetros SQL.
         stmt.setInt(1,    movimentacao.getEquipamento().getIdEquip());
-        stmt.setString(2, movimentacao.getNumeroSerieMov());
-        stmt.setString(3, movimentacao.getTipoMovimentacaoMov());
-        stmt.setInt(4,    movimentacao.getUnidadeOrigem().getIdUnid());
-        stmt.setInt(5,    movimentacao.getUsuarioOrigem().getIdUsu());
-        stmt.setInt(6,    movimentacao.getUnidadeDestino().getIdUnid());
-        stmt.setInt(7,    movimentacao.getUsuarioDestino().getIdUsu());
-        stmt.setString(8, movimentacao.getObservacaoMov());
-        stmt.setTimestamp(9, movimentacao.getDataInsercao());
+        stmt.setString(2, movimentacao.getTipoMovimentacaoMov());
+        stmt.setInt(3,    movimentacao.getUnidadeOrigem().getIdUnid());
+        stmt.setInt(4,    movimentacao.getUsuarioOrigem().getIdUsu());
+        stmt.setInt(5,    movimentacao.getUnidadeDestino().getIdUnid());
+        stmt.setInt(6,    movimentacao.getUsuarioDestino().getIdUsu());
+        stmt.setString(7, movimentacao.getObservacaoMov());
+        stmt.setTimestamp(8, movimentacao.getDataInsercao());
 
         // Executa gravação no banco.
         stmt.executeUpdate();
@@ -106,12 +106,14 @@ public class MovimentacaoDAO {
 
         String sql = "SELECT "
                 + "    m.id_mov              AS id, "
-                + "    m.numero_serie        AS num_serie, "
                 + "    m.tipo_movimentacao, "
                 + "    m.observacao          AS observacoes, "
                 + "    m.data_insercao       AS data_hora, "
                 + "    e.id_equip            AS id_equipamento, "
                 + "    e.nome_equip          AS nome_equipamento, "
+                + "    e.num_serie_equip     AS numero_equipamento, "
+                + "    f.id_fab              AS id_fabricante, "
+                + "    f.nome_fab            AS nome_fabricante, "
                 + "    uo.id_unid            AS id_origem, "
                 + "    uo.nome_unid          AS unidade_origem, "
                 + "    ud.id_unid            AS id_destino, "
@@ -121,7 +123,8 @@ public class MovimentacaoDAO {
                 + "    ur.id_usu             AS id_usuario_recepcao, "
                 + "    ur.nome_usu           AS nome_usuario_recepcao "
                 + "FROM movimentacao m "
-                + "JOIN equipamento e  ON m.equipamento    = e.id_equip "
+                + "JOIN equipamento e  ON m.equipamento     = e.id_equip "
+                + "JOIN fabricante f   ON e.fabricante = f.id_fab "
                 + "JOIN unidade uo     ON m.unidade_origem  = uo.id_unid "
                 + "JOIN unidade ud     ON m.unidade_destino = ud.id_unid "
                 + "JOIN usuario ul     ON m.usuario_origem  = ul.id_usu "
@@ -136,6 +139,11 @@ public class MovimentacaoDAO {
             Equipamento equipamento = new Equipamento();
             equipamento.setIdEquip(rs.getInt("id_equipamento"));
             equipamento.setNomeEquip(rs.getString("nome_equipamento"));
+            equipamento.setNumSerieEquip(rs.getString("numero_equipamento"));
+            
+            Fabricante fabricante = new Fabricante();
+            fabricante.setIdFab(rs.getInt("id_fabricante"));
+            fabricante.setNomeFab(rs.getString("nome_fabricante"));
 
             Unidade unidade_origem = new Unidade();
             unidade_origem.setIdUnid(rs.getInt("id_origem"));
@@ -156,7 +164,7 @@ public class MovimentacaoDAO {
             Movimentacao movimentacao = new Movimentacao(
                 rs.getInt("id"),
                 equipamento,
-                rs.getString("num_serie"),
+                fabricante,
                 rs.getString("tipo_movimentacao"),
                 unidade_origem,
                 usuario_liberacao,
@@ -172,6 +180,7 @@ public class MovimentacaoDAO {
 
         rs.close();
         stmt.close();
+        
         return movimentacoes;
     }
 
@@ -185,7 +194,7 @@ public class MovimentacaoDAO {
      * @throws Exception erro durante execução SQL.
      */
     public void alterarMovimentacao(Movimentacao movimentacao) throws Exception {
-        String sql = "UPDATE movimentacao SET equipamento = ?, numero_serie = ?, "
+        String sql = "UPDATE movimentacao SET equipamento = ?, "
                    + "tipo_movimentacao = ?, unidade_origem = ?, usuario_origem = ?, "
                    + "unidade_destino = ?, usuario_destino = ?, observacao = ? "
                    + "WHERE id_mov = ?";
@@ -193,14 +202,13 @@ public class MovimentacaoDAO {
         PreparedStatement stmt = conexao.prepareStatement(sql);
 
         stmt.setInt(1,    movimentacao.getEquipamento().getIdEquip());
-        stmt.setString(2, movimentacao.getNumeroSerieMov());
-        stmt.setString(3, movimentacao.getTipoMovimentacaoMov());
-        stmt.setInt(4,    movimentacao.getUnidadeOrigem().getIdUnid());
-        stmt.setInt(5,    movimentacao.getUsuarioOrigem().getIdUsu());
-        stmt.setInt(6,    movimentacao.getUnidadeDestino().getIdUnid());
-        stmt.setInt(7,    movimentacao.getUsuarioDestino().getIdUsu());
-        stmt.setString(8, movimentacao.getObservacaoMov());
-        stmt.setInt(9,    movimentacao.getIdMov());
+        stmt.setString(2, movimentacao.getTipoMovimentacaoMov());
+        stmt.setInt(3,    movimentacao.getUnidadeOrigem().getIdUnid());
+        stmt.setInt(4,    movimentacao.getUsuarioOrigem().getIdUsu());
+        stmt.setInt(5,    movimentacao.getUnidadeDestino().getIdUnid());
+        stmt.setInt(6,    movimentacao.getUsuarioDestino().getIdUsu());
+        stmt.setString(7, movimentacao.getObservacaoMov());
+        stmt.setInt(8,    movimentacao.getIdMov());
 
         stmt.executeUpdate();
         stmt.close();
@@ -329,12 +337,13 @@ public class MovimentacaoDAO {
         StringBuilder sql = new StringBuilder(
             "SELECT "
           + "    m.id_mov              AS id, "
-          + "    m.numero_serie        AS num_serie, "
           + "    m.tipo_movimentacao, "
           + "    m.observacao          AS observacoes, "
           + "    m.data_insercao       AS data_hora, "
           + "    e.id_equip            AS id_equipamento, "
           + "    e.nome_equip          AS nome_equipamento, "
+          + "    e.fabricante          AS id_fabricante, "
+          + "    f.nome_fab            AS nome_fabricante, "
           + "    uo.id_unid            AS id_origem, "
           + "    uo.nome_unid          AS unidade_origem, "
           + "    ud.id_unid            AS id_destino, "
@@ -345,6 +354,7 @@ public class MovimentacaoDAO {
           + "    ur.nome_usu           AS nome_usuario_recepcao "
           + "FROM movimentacao m "
           + "JOIN equipamento e  ON m.equipamento    = e.id_equip "
+          + "JOIN fabricante f   ON e.fabricante     = f.id_fab "
           + "JOIN unidade uo     ON m.unidade_origem  = uo.id_unid "
           + "JOIN unidade ud     ON m.unidade_destino = ud.id_unid "
           + "JOIN usuario ul     ON m.usuario_origem  = ul.id_usu "
@@ -362,10 +372,10 @@ public class MovimentacaoDAO {
             sql.append(" AND m.tipo_movimentacao = ? ");
         }
         if (equipamento != null && !equipamento.trim().isEmpty()) {
-            sql.append(" AND (e.nome_equip LIKE ? OR m.numero_serie LIKE ?) ");
+            sql.append(" AND (e.nome_equip LIKE ? OR e.num_serie_equip LIKE ?) ");
         }
 
-        sql.append(" ORDER BY m.id_mov DESC ");
+        sql.append(" ORDER BY id_mov DESC ");
 
         PreparedStatement stmt = conexao.prepareStatement(sql.toString());
         int index = 1;
@@ -391,6 +401,10 @@ public class MovimentacaoDAO {
             Equipamento equip = new Equipamento();
             equip.setIdEquip(rs.getInt("id_equipamento"));
             equip.setNomeEquip(rs.getString("nome_equipamento"));
+            
+            Fabricante fabricante = new Fabricante();
+            fabricante.setIdFab(rs.getInt("id_fabricante"));
+            fabricante.setNomeFab(rs.getString("nome_fabricante"));
 
             Unidade unidade_origem = new Unidade();
             unidade_origem.setIdUnid(rs.getInt("id_origem"));
@@ -411,7 +425,7 @@ public class MovimentacaoDAO {
             Movimentacao mov = new Movimentacao(
                 rs.getInt("id"),
                 equip,
-                rs.getString("num_serie"),
+                fabricante,
                 rs.getString("tipo_movimentacao"),
                 unidade_origem,
                 usuario_liberacao,
@@ -510,12 +524,13 @@ public class MovimentacaoDAO {
         
         String sql = "SELECT "
                 + "    m.id_mov              AS id, "
-                + "    m.numero_serie        AS num_serie, "
                 + "    m.tipo_movimentacao, "
                 + "    m.observacao          AS observacoes, "
                 + "    m.data_insercao       AS data_hora, "
                 + "    e.id_equip            AS id_equipamento, "
                 + "    e.nome_equip          AS nome_equipamento, "
+                + "    f.id_fab              AS id_fabricante, "
+                + "    f.nome_fab            AS nome_fabricante, "
                 + "    uo.id_unid            AS id_origem, "
                 + "    uo.nome_unid          AS unidade_origem, "
                 + "    ud.id_unid            AS id_destino, "
@@ -526,6 +541,7 @@ public class MovimentacaoDAO {
                 + "    ur.nome_usu           AS nome_usuario_recepcao "
                 + "FROM movimentacao m "
                 + "JOIN equipamento e  ON m.equipamento    = e.id_equip "
+                + "JOIN fabricante f   ON e.fabricante = f.id_fab "
                 + "JOIN unidade uo     ON m.unidade_origem  = uo.id_unid "
                 + "JOIN unidade ud     ON m.unidade_destino = ud.id_unid "
                 + "JOIN usuario ul     ON m.usuario_origem  = ul.id_usu "
@@ -541,6 +557,10 @@ public class MovimentacaoDAO {
             Equipamento equipamento = new Equipamento();
             equipamento.setIdEquip(rs.getInt("id_equipamento"));
             equipamento.setNomeEquip(rs.getString("nome_equipamento"));
+            
+            Fabricante fabricante = new Fabricante();
+            fabricante.setIdFab(rs.getInt("id_fabricante"));
+            fabricante.setNomeFab(rs.getString("nome_fabricante"));
             
             Unidade unidade_origem = new Unidade();
             unidade_origem.setIdUnid(rs.getInt("id_origem"));
@@ -561,7 +581,7 @@ public class MovimentacaoDAO {
             Movimentacao movimentacao = new Movimentacao(
                 rs.getInt("id"),
                 equipamento,
-                rs.getString("num_serie"),
+                fabricante,
                 rs.getString("tipo_movimentacao"),
                 unidade_origem,
                 usuario_liberacao,

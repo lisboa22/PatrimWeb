@@ -69,9 +69,15 @@ public class LoginController extends HttpServlet {
                 // Regra de segurança: usuário autenticado passa a ter sessão ativa
                 HttpSession sessao = request.getSession(true);
 
-                // Armazena objeto Usuario na sessão para controle de acesso
-                sessao.setAttribute("usuarioLogado", usuario);
-            	
+                // ✅ Busca o usuário completo (com perfil) para que o controle de acesso
+                //    funcione corretamente em todos os controllers e views.
+                //    O método autenticar() retorna um objeto parcial (sem perfil),
+                //    por isso é necessário recarregar via buscarPorId().
+                Usuario usuarioCompleto = usuarioDAO.buscarPorId(usuario.getIdUsu());
+
+                // Armazena objeto Usuario completo na sessão para controle de acesso
+                sessao.setAttribute("usuarioLogado", usuarioCompleto != null ? usuarioCompleto : usuario);
+
             	// Pega o nome do objeto usuario (ex: usuario.getNomeUsu()) e salva como 'nomeUsuario'
                 sessao.setAttribute("nomeUsuario", usuario.getNomeUsu());
 
@@ -81,13 +87,14 @@ public class LoginController extends HttpServlet {
             } else {
                 // ❌ Login inválido
                 // Regra de negócio: credenciais incorretas não criam sessão
-
+            	//System.out.println("Login inválido!");
                 // Redireciona para página inicial (login)
                 response.sendRedirect("/patrimweb/index.jsp");
             }
 
         } catch (Exception e) {
             // Encapsula exceções técnicas como ServletException
+        	//System.out.println("Error!");
             throw new ServletException("Erro no LoginController", e);
         }
     }

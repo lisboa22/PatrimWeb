@@ -84,6 +84,13 @@ public class Usuario {
     private String senhaUsu;
     
     /**
+     * Perfil do usuário utilizada na autenticação tradicional.
+     *
+     * Ponto crítico: Administradores terão acesso total ao sistema.
+     */
+    private Perfil perfil;
+    
+    /**
      * Construtor vazio.
      *
      * Finalidade:
@@ -109,7 +116,7 @@ public class Usuario {
      * Uso comum:
      * - Reconstrução de objetos vindos de consultas ao banco de dados.
      */
-    public Usuario(int idUsu, String nomeUsu, String cpfUsu, String telefoneUsu, String emailUsu, String enderecoUsu, Timestamp dataInsercao, Boolean LoginGoogle, String senhaUsu) {
+    public Usuario(int idUsu, String nomeUsu, String cpfUsu, String telefoneUsu, String emailUsu, String enderecoUsu, Timestamp dataInsercao, Boolean LoginGoogle, String senhaUsu, Perfil perfil) {
         this.idUsu = idUsu;
         this.nomeUsu = nomeUsu;
         this.cpfUsu = cpfUsu;
@@ -119,6 +126,7 @@ public class Usuario {
         this.dataInsercao = dataInsercao;
         this.LoginGoogle = LoginGoogle;
         this.senhaUsu = senhaUsu;
+        this.perfil = perfil;
     }
     
     /**
@@ -136,7 +144,7 @@ public class Usuario {
      * Regra implícita:
      * - O ID não é informado pois normalmente será gerado pelo banco.
      */
-    public Usuario(String nomeUsu, String cpfUsu, String telefoneUsu, String emailUsu, String enderecoUsu, Timestamp dataInsercao, Boolean LoginGoogle, String senhaUsu) {
+    public Usuario(String nomeUsu, String cpfUsu, String telefoneUsu, String emailUsu, String enderecoUsu, Timestamp dataInsercao, Boolean LoginGoogle, String senhaUsu, Perfil perfil) {
         this.nomeUsu = nomeUsu;
         this.cpfUsu = cpfUsu;
         this.telefoneUsu = telefoneUsu;
@@ -145,6 +153,7 @@ public class Usuario {
         this.dataInsercao = dataInsercao;
         this.LoginGoogle = LoginGoogle;
         this.senhaUsu = senhaUsu;
+        this.perfil = perfil;
     }
     
     /**
@@ -329,8 +338,33 @@ public class Usuario {
      * - Este método possui comportamento definido conforme implementação atual,
      *   sendo mantido sem alterações conforme regras de documentação solicitadas.
      */
-    public void getSenhaUsu(String senhaUsu) {
-        this.senhaUsu = enderecoUsu;
+    public void setSenhaUsu(String senhaUsu) {
+        this.senhaUsu = senhaUsu;
+    }
+    
+    /**
+     * Retorna o perfil do usuário.
+     *
+     * @return perfilUsu Perfil cadastrado.
+     *
+     * Ponto crítico:
+     * - Administrador tem acesso total.
+     */
+    public Perfil getPerfilUsu() {
+        return perfil;
+    }
+    
+    /**
+     * Método responsável por definir o perfil do usuário.
+     *
+     * @param perfilUsu Novo perfil a ser atribuída.
+     *
+     * Observação técnica:
+     * - Este método possui comportamento definido conforme implementação atual,
+     *   sendo mantido sem alterações conforme regras de documentação solicitadas.
+     */
+    public void setPerfilUsu(Perfil perfil) {
+        this.perfil = perfil;
     }
 
 }

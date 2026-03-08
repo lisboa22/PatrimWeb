@@ -1460,6 +1460,4 @@ try {
 
 ### 9.5 Recomendações Adicionais de Segurança
 
-Para **ambiente de produção**, implementar:
-
-1. **
+Obs.: Para **ambiente de produção**, implementar Controle de Acesso por Níveis de Acesso e Permissão:

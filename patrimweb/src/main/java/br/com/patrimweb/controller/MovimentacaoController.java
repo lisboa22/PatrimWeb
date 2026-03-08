@@ -346,6 +346,8 @@ public class MovimentacaoController extends HttpServlet {
      * REGRA DE NEGÓCIO:
      * - Quando for cadastro, define automaticamente data de inserção.
      * - Quando for edição, mantém data original (null).
+     * - O Fabricante é obtido diretamente do Equipamento buscado no banco,
+     *   não como parâmetro independente do formulário.
      *
      * INTERAÇÃO COM BANCO:
      * - Realiza múltiplas buscas por ID para recuperar entidades
@@ -367,15 +369,21 @@ public class MovimentacaoController extends HttpServlet {
         int idUnidadeDestino = Integer.parseInt(request.getParameter(isEdicao ? "edit_id_unidade_destino" : "id_unidade_destino"));
         int idUsuarioDestino = Integer.parseInt(request.getParameter(isEdicao ? "edit_id_usuario_destino" : "id_usuario_destino"));
 
-        String numeroSerie = request.getParameter(isEdicao ? "numero_serie_mov" : "numero_serie");
-        String tipoMov     = request.getParameter("tipo_movimentacao");
-        String observacao  = request.getParameter("observacao");
+        String tipoMov    = request.getParameter("tipo_movimentacao");
+        String observacao = request.getParameter("observacao");
+
+        // Busca o equipamento completo — o Fabricante está contido nele
+        Equipamento equipamento = equipamentoDAO.buscarPorId(idEquipamento);
+
+        // O fabricante é obtido a partir do equipamento já persistido no banco,
+        // evitando parâmetro extra no formulário e garantindo consistência dos dados.
+        Fabricante fabricante = equipamento.getFabricante();
 
         // Criação do objeto com entidades recuperadas do banco
         Movimentacao movimentacao = new Movimentacao(
                 isEdicao ? idMov : 0,
-                equipamentoDAO.buscarPorId(idEquipamento),
-                numeroSerie,
+                equipamento,
+                fabricante,
                 tipoMov,
                 unidadeDAO.buscarPorId(idUnidadeOrigem),
                 usuarioDAO.buscarPorId(idUsuarioOrigem),

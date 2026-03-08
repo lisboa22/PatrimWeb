@@ -159,7 +159,9 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Equipamento</th>
+                                <th>Equipamento/Número Série</th>
+                                <th>Fabricante</th>
+                                <th>Tipo</th>
                                 <th>Unidade origem → destino</th>
                                 <th>Usuário</th>
                                 <th>Data da movimentação</th>
@@ -175,7 +177,9 @@
                             <c:forEach var="atividade" items="${atividadesRecentes}">
                                 <tr>
                                     <!-- Acesso a propriedades encadeadas do objeto -->
-                                    <td>${atividade.equipamento.nomeEquip}</td>
+                                    <td>${atividade.equipamento.nomeEquip} → ${atividade.equipamento.numSerieEquip}</td>
+                                    <td>${atividade.fabricante.nomeFab}</td>
+                                    <td>${atividade.tipoMovimentacaoMov}</td>
                                     <td>${atividade.unidadeOrigem.nomeUnid} → ${atividade.unidadeDestino.nomeUnid}</td>
                                     <td>${atividade.usuarioOrigem.nomeUsu} → ${atividade.usuarioDestino.nomeUsu}</td>
 

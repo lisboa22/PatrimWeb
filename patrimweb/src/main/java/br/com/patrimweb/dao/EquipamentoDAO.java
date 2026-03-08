@@ -87,14 +87,15 @@ public class EquipamentoDAO {//Declaração da classe EquipamentoDAO, responsáv
 	 //Método para inserir um novo equipamento no banco de dados. Ele recebe um objeto Equipamento e pode lançar uma exceção em caso de erro.
 	 public void adicionarEquipamento(Equipamento equipamento) throws Exception {
 	     //Declaração da string SQL para inserir um novo produto. Os valores são representados por ?, que serão preenchidos posteriormente.
-		 String sql = "INSERT INTO equipamento (nome_equip, fabricante, data_insercao) VALUES (?, ?, ?)";
+		 String sql = "INSERT INTO equipamento (nome_equip, num_serie_equip, fabricante, data_insercao) VALUES (?, ?, ?, ?)";
 	     //Criação de um PreparedStatement, que é um objeto usado para executar a consulta SQL de forma segura e eficiente.
 		 PreparedStatement stmt = conexao.prepareStatement(sql);
 
 	     // Associação dos parâmetros da query com os dados do objeto de domínio
 		 stmt.setString(1, equipamento.getNomeEquip());
-	     stmt.setInt (2, equipamento.getFabricante().getIdFab());
-	     stmt.setTimestamp(3, equipamento.getDataInsercao());
+		 stmt.setString(2, equipamento.getNumSerieEquip());
+	     stmt.setInt (3, equipamento.getFabricante().getIdFab());
+	     stmt.setTimestamp(4, equipamento.getDataInsercao());
 
 	     // Executa inserção no banco
 	     stmt.executeUpdate(); //Executa o update 
@@ -140,7 +141,8 @@ public class EquipamentoDAO {//Declaração da classe EquipamentoDAO, responsáv
 		        // Mapeamento do registro para objeto Equipamento
 		        Equipamento equipamento = new Equipamento(
 		            rs.getInt("id_equip"), 
-		            rs.getString("nome_equip"), 
+		            rs.getString("nome_equip"),
+		            rs.getString("num_serie_equip"),
 		            fabricante, 
 		            rs.getTimestamp("data_insercao")
 		        );
@@ -167,12 +169,13 @@ public class EquipamentoDAO {//Declaração da classe EquipamentoDAO, responsáv
 	 //Método para atualizar os dados de um produto no banco de dados.
 	 public void alterarEquipamento(Equipamento equipamento) throws Exception {
 	     //Declaração da string SQL para atualizar um produto específico com base no seu idEquip.
-		 String sql = "UPDATE equipamento SET nome_equip = ?, fabricante = ? WHERE id_equip = ?";
+		 String sql = "UPDATE equipamento SET nome_equip = ?, num_serie_equip = ?, fabricante = ? WHERE id_equip = ?";
 	     //Preenchimento dos parâmetros ? com os valores do objeto Equipamento.
 		 PreparedStatement stmt = conexao.prepareStatement(sql);
 	     stmt.setString(1, equipamento.getNomeEquip());
-	     stmt.setInt(2, equipamento.getFabricante().getIdFab());
-	     stmt.setInt(3, equipamento.getIdEquip());
+	     stmt.setString(2, equipamento.getNumSerieEquip());
+	     stmt.setInt(3, equipamento.getFabricante().getIdFab());
+	     stmt.setInt(4, equipamento.getIdEquip());
 
 	     // Execução da atualização no banco
 	     stmt.executeUpdate();
@@ -241,6 +244,7 @@ public class EquipamentoDAO {//Declaração da classe EquipamentoDAO, responsáv
 	         equipamento = new Equipamento(
 	             rs.getInt("id_equip"),
 	             rs.getString("nome_equip"),
+	             rs.getString("num_serie_equip"),
 	             fabricante,
 	             rs.getTimestamp("data_insercao")
 	         );
@@ -330,6 +334,7 @@ public class EquipamentoDAO {//Declaração da classe EquipamentoDAO, responsáv
 	         Equipamento equipamento = new Equipamento(
 	             rs.getInt("id_equip"),
 	             rs.getString("nome_equip"),
+	             rs.getString("num_serie_equip"),
 	             fabricante,
 	             rs.getTimestamp("data_insercao")
 	         );

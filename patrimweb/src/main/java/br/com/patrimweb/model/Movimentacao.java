@@ -36,12 +36,12 @@ public class Movimentacao {
      * Define qual item patrimonial está sendo movimentado.
      */
     private Equipamento equipamento;
-
+    
     /**
-     * Número de série do equipamento no momento da movimentação.
-     * Utilizado para rastreabilidade física do ativo.
+     * Fabricante associado à movimentação.
+     * Define qual item patrimonial está sendo movimentado.
      */
-    private String numeroSerieMov;
+    private Fabricante fabricante;
 
     /**
      * Tipo da movimentação realizada.
@@ -116,13 +116,12 @@ public class Movimentacao {
      * - Reconstrução de objetos provenientes de consultas
      *   ao banco de dados (operações SELECT).
      */
-    public Movimentacao(int idMov, Equipamento equipamento, String numeroSerieMov, 
-                        String tipoMovimentacaoMov, Unidade unidadeOrigem, Usuario usuarioOrigem, 
+    public Movimentacao(int idMov, Equipamento equipamento, Fabricante fabricante, String tipoMovimentacaoMov, Unidade unidadeOrigem, Usuario usuarioOrigem, 
                         Unidade unidadeDestino, Usuario usuarioDestino, String observacaoMov, 
                         Timestamp dataInsercao) {
         this.idMov = idMov;
         this.equipamento = equipamento;
-        this.numeroSerieMov = numeroSerieMov;
+        this.fabricante = fabricante;
         this.tipoMovimentacaoMov = tipoMovimentacaoMov;
         this.unidadeOrigem = unidadeOrigem;
         this.usuarioOrigem = usuarioOrigem;
@@ -149,11 +148,11 @@ public class Movimentacao {
      * - O ID não é informado pois geralmente é gerado automaticamente
      *   pelo banco de dados.
      */
-    public Movimentacao(Equipamento equipamento, String numeroSerieMov, String tipoMovimentacaoMov, 
+    public Movimentacao(Equipamento equipamento, Fabricante fabricante, String tipoMovimentacaoMov, 
     					Unidade unidadeOrigem, Usuario usuarioOrigem, Unidade unidadeDestino, 
     					Usuario usuarioDestino, String observacaoMov, Timestamp dataInsercao) {
         this.equipamento = equipamento;
-        this.numeroSerieMov = numeroSerieMov;
+        this.fabricante = fabricante;
         this.tipoMovimentacaoMov = tipoMovimentacaoMov;
         this.unidadeOrigem = unidadeOrigem;
         this.usuarioOrigem = usuarioOrigem;
@@ -204,24 +203,21 @@ public class Movimentacao {
     }
     
     /**
-     * Retorna o número de série registrado na movimentação.
+     * Retorna o equipamento associado à movimentação.
      *
-     * @return numeroSerieMov Número de série do equipamento.
+     * @return Equipamento movimentado.
      */
-    public String getNumeroSerieMov() {
-        return numeroSerieMov;
+    public Fabricante getFabricante() {
+        return fabricante;
     }
     
     /**
-     * Define o número de série do equipamento.
+     * Define o equipamento da movimentação.
      *
-     * @param numeroSerieMov Número de série.
-     *
-     * Importância:
-     * - Permite rastreabilidade física independente do ID interno.
+     * @param equipamento Equipamento a ser associado.
      */
-    public void setNumeroSerieMov(String numeroSerieMov) {
-        this.numeroSerieMov = numeroSerieMov;
+    public void setFabricante(Fabricante fabricante) {
+        this.fabricante = fabricante;
     }
     
     /**

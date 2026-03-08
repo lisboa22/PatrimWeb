@@ -272,7 +272,7 @@
 
                                             <td>
                                                 ${m.equipamento.nomeEquip}<br>
-                                                <span style="font-size: 11px; color: #9ca3af;">SN: ${m.numeroSerieMov}</span>
+                                                <span style="font-size: 11px; color: #9ca3af;">SN: ${m.equipamento.numSerieEquip}</span>
                                             </td>
 
                                             <td>
@@ -353,21 +353,65 @@
                 // Orientação paisagem para comportar todas as colunas
                 const doc = new jsPDF('l', 'mm', 'a4');
 
-                doc.setFontSize(18);
-                doc.text("Relatório de Movimentações - PatrimWeb", 14, 15);
+                // =====================================
+                // INSERÇÃO DO LOGO
+                // Carrega a imagem do logo a partir do caminho relativo do projeto.
+                // O logo é convertido em base64 via canvas para ser embutido no PDF.
+                // =====================================
+                const logoImg = new Image();
+                logoImg.src = 'assets/images/logo.png';
 
-                doc.setFontSize(10);
-                doc.text("Gerado em: " + new Date().toLocaleDateString(), 14, 22);
+                const gerarPDF = function() {
+                    try {
+                        // Desenha a imagem em um canvas temporário para obter o base64
+                        const canvas = document.createElement('canvas');
+                        canvas.width  = logoImg.naturalWidth  || logoImg.width;
+                        canvas.height = logoImg.naturalHeight || logoImg.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(logoImg, 0, 0);
+                        const logoBase64 = canvas.toDataURL('image/png');
 
-                doc.autoTable({
-                    html: '#tabelaRelatorio',
-                    startY: 30,
-                    theme: 'grid',
-                    headStyles: { fillColor: [59, 130, 246] },
-                    styles: { fontSize: 8, cellPadding: 2 }
-                });
+                        // Calcula proporção para encaixar o logo em no máximo 40mm de largura
+                        const maxLogoWidth  = 40;
+                        const maxLogoHeight = 15;
+                        const ratio  = Math.min(maxLogoWidth / canvas.width, maxLogoHeight / canvas.height);
+                        const logoW  = canvas.width  * ratio;
+                        const logoH  = canvas.height * ratio;
 
-                doc.save('relatorio_movimentacoes.pdf');
+                        // Posiciona o logo no canto superior esquerdo
+                        doc.addImage(logoBase64, 'PNG', 14, 8, logoW, logoH);
+                    } catch (e) {
+                        // Caso a imagem não possa ser lida (ex: CORS), ignora e continua
+                        console.warn('Não foi possível adicionar o logo ao PDF:', e);
+                    }
+
+                    // Título e data deslocados para não sobrepor o logo
+                    doc.setFontSize(18);
+                    doc.text("Relatório de Movimentações - PatrimWeb", 30, 15);
+
+                    doc.setFontSize(10);
+                    doc.text("Gerado em: " + new Date().toLocaleDateString(), 30, 22);
+
+                    doc.autoTable({
+                        html: '#tabelaRelatorio',
+                        startY: 30,
+                        theme: 'grid',
+                        headStyles: { fillColor: [59, 130, 246] },
+                        styles: { fontSize: 8, cellPadding: 2 }
+                    });
+
+                    doc.save('relatorio_movimentacoes.pdf');
+                };
+
+                // Se a imagem já estiver carregada, gera o PDF imediatamente;
+                // caso contrário, aguarda o evento de carregamento.
+                if (logoImg.complete && logoImg.naturalWidth > 0) {
+                    gerarPDF();
+                } else {
+                    logoImg.onload  = gerarPDF;
+                    logoImg.onerror = gerarPDF; // Continua mesmo se o logo não carregar
+                }
+                return; // Encerra aqui; gerarPDF() fará o save assincronamente
             }
             else if (type === 'Excel') {
                 const tabela = document.getElementById('tabelaRelatorio');
@@ -376,7 +420,6 @@
             }
         }
     </script>
-
     <script>
         // Altura máxima das barras do gráfico
         const ALTURA_MAXIMA = 140;
@@ -387,27 +430,7 @@
         //   Não retorna valor.
         //   Atualiza visualmente as barras com base nos dados.
         // =====================================
-        function atualizarGrafico() {
-            document.querySelectorAll('.bar-group').forEach(function(barGroup) {
-
-                const mes    = parseInt(barGroup.dataset.mes);
-                const qtdMes = movimentacoesPorMes[mes] || 0;
-
-                let altura = 0;
-
-                // Cálculo proporcional com base no total anual
-                if (totalMovimentacoesAno > 0) {
-                    altura = (qtdMes * ALTURA_MAXIMA) / totalMovimentacoesAno;
-                }
-
-                // Garante visibilidade mínima quando há valor
-                if (qtdMes > 0 && altura < 5) {
-                    altura = 5;
-                }
-
-                barGroup.querySelector('.bar').style.height = altura + 'px';
-            });
-        }
+        
 
         atualizarGrafico();
         

@@ -165,6 +165,7 @@ public class EquipamentoController extends HttpServlet {
   
     	try {
 	    	String nomeEquip = request.getParameter("nome_equip");
+	    	String numserieEquip = request.getParameter("numero_equip");
 	        int idFabricante = Integer.parseInt(request.getParameter("id_fabricante"));
 	
 	        // Recupera objeto Fabricante completo a partir do ID informado
@@ -174,7 +175,7 @@ public class EquipamentoController extends HttpServlet {
 	        Timestamp dataInsercao = Timestamp.valueOf(LocalDateTime.now());
 	
 	        // Cria entidade Equipamento associando fabricante e timestamp
-	        Equipamento equipamento = new Equipamento(nomeEquip, fabricante, dataInsercao);
+	        Equipamento equipamento = new Equipamento(nomeEquip, numserieEquip, fabricante, dataInsercao);
 	
 	        // Persiste no banco de dados
 	        equipamentoDAO.adicionarEquipamento(equipamento);
@@ -212,13 +213,14 @@ public class EquipamentoController extends HttpServlet {
     	try {
 	        int idEquip = Integer.parseInt(request.getParameter("id_equip"));
 	        String nomeEquip = request.getParameter("nome_equip");
+	        String numserieEquip = request.getParameter("numero_equip");
 	        int idFabricante = Integer.parseInt(request.getParameter("id_fabricante"));
 	
 	        // Busca fabricante correspondente
 	        Fabricante fabricante = fabricanteDAO.buscarPorId(idFabricante);
 	    
 	        // Cria objeto com dados atualizados
-	        Equipamento equipamento = new Equipamento(idEquip, nomeEquip, fabricante);
+	        Equipamento equipamento = new Equipamento(idEquip, nomeEquip, numserieEquip, fabricante);
 	
 	        // Atualiza no banco
 	        equipamentoDAO.alterarEquipamento(equipamento);
