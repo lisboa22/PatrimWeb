@@ -148,9 +148,9 @@
                                        disabled style="background-color:#f3f4f6">
                             </div>
                         </div>
-                        <div style="margin-top:20px;text-align:right">
+                        <!-- <div style="margin-top:20px;text-align:right">
                             <button type="submit" class="btn btn-primary">Atualizar Perfil</button>
-                        </div>
+                        </div> -->
                     </form>
                 </div>
                 <!-- FIM ABA: PERFIL -->
