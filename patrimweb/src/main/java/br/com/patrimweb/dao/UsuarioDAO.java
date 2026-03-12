@@ -156,6 +156,32 @@ public class UsuarioDAO {
 	 }
 
 	 /**
+	  * Atualiza apenas os dados pessoais do usuário logado (perfil próprio).
+	  *
+	  * Campos atualizados: nome, e-mail, telefone, CPF e endereço.
+	  * Campos PRESERVADOS (não alterados por este método): senha_usu, id_perfil.
+	  * Isso garante que o usuário não consiga alterar seu próprio cargo/perfil
+	  * nem sobrescrever a senha por esta rota.
+	  *
+	  * @param usuario objeto com os novos dados (id_usu obrigatório)
+	  * @throws Exception em caso de erro SQL
+	  */
+	 public void atualizarDadosPerfil(Usuario usuario) throws Exception {
+		 String sql = "UPDATE usuario SET nome_usu = ?, email_usu = ?, telefone_usu = ?, cpf_usu = ?, endereco_usu = ? WHERE id_usu = ?";
+		 PreparedStatement stmt = conexao.prepareStatement(sql);
+
+		 stmt.setString(1, usuario.getNomeUsu());
+		 stmt.setString(2, usuario.getEmailUsu());
+		 stmt.setString(3, usuario.getTelefoneUsu());
+		 stmt.setString(4, usuario.getCpfUsu());
+		 stmt.setString(5, usuario.getEnderecoUsu());
+		 stmt.setInt(6, usuario.getIdUsu());
+
+		 stmt.executeUpdate();
+		 stmt.close();
+	 }
+
+	 /**
 	  * Remove permanentemente um usuário do banco de dados.
 	  *
 	  * @param id identificador do usuário
@@ -445,4 +471,47 @@ public class UsuarioDAO {
 	        System.out.println("Total: " + total);
 	        return total;
 	    }
+
+	 /**
+	  * Retorna o hash BCrypt da senha armazenada para o usuário informado.
+	  *
+	  * Usado pelo processarAlterarSenha do controller para verificar se a
+	  * "senha atual" digitada corresponde ao hash gravado no banco antes de
+	  * permitir a troca.
+	  *
+	  * @param idUsu identificador do usuário
+	  * @return hash BCrypt da senha ou null se o usuário não for encontrado
+	  * @throws Exception em caso de erro SQL
+	  */
+	 public String buscarHashSenha(int idUsu) throws Exception {
+	     String sql = "SELECT senha_usu FROM usuario WHERE id_usu = ?";
+	     try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+	         stmt.setInt(1, idUsu);
+	         ResultSet rs = stmt.executeQuery();
+	         if (rs.next()) {
+	             return rs.getString("senha_usu");
+	         }
+	     }
+	     return null;
+	 }
+
+	 /**
+	  * Persiste a nova senha do usuário, já criptografada em BCrypt.
+	  *
+	  * A criptografia (SenhaUtils.criptografar) deve ser aplicada pelo
+	  * Controller ANTES de chamar este método — o DAO nunca recebe nem
+	  * armazena senhas em texto puro.
+	  *
+	  * @param idUsu    identificador do usuário
+	  * @param novoHash novo hash BCrypt da senha
+	  * @throws Exception em caso de erro SQL
+	  */
+	 public void alterarSenha(int idUsu, String novoHash) throws Exception {
+	     String sql = "UPDATE usuario SET senha_usu = ? WHERE id_usu = ?";
+	     try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+	         stmt.setString(1, novoHash);
+	         stmt.setInt(2, idUsu);
+	         stmt.executeUpdate();
+	     }
+	 }
 }

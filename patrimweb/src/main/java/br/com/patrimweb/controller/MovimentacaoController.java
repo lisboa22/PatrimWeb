@@ -8,6 +8,7 @@ import javax.servlet.*;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -97,6 +98,18 @@ public class MovimentacaoController extends HttpServlet {
 
         // Evita que páginas protegidas sejam armazenadas em cache
         configurarNoCache(response);
+
+        // Requisição AJAX para buscar localização atual do equipamento
+        String action = request.getParameter("action");
+        if ("buscarLocalizacao".equals(action)) {
+            try {
+				buscarLocalizacaoEquipamento(request, response);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            return;
+        }
 
         try {
             listarMovimentacoes(request, response);
@@ -324,10 +337,31 @@ public class MovimentacaoController extends HttpServlet {
     private void listarMovimentacoes(HttpServletRequest request, HttpServletResponse response)
             throws Exception {
 
-        request.setAttribute("movimentacoes", movimentacaoDAO.listarMovimentacoes());
+        /*
+         * Regra de negócio — filtro do checkbox "Histórico de Movimentações":
+         * - Desmarcado / padrão (exibirTodos ausente ou "false"):
+         *     Exibe apenas a última movimentação de cada equipamento.
+         * - Marcado (exibirTodos = "true"):
+         *     Exibe o histórico completo de todas as movimentações.
+         *
+         * Em ambos os casos, "ultimosIds" é enviado à JSP para que os botões
+         * de editar/excluir sejam habilitados somente na última movimentação
+         * de cada equipamento, independentemente do modo de exibição.
+         */
+        String exibirTodosParam = request.getParameter("exibirTodos");
+        boolean exibirTodos = "true".equals(exibirTodosParam);
+
+        if (exibirTodos) {
+            request.setAttribute("movimentacoes", movimentacaoDAO.listarMovimentacoes());
+        } else {
+            request.setAttribute("movimentacoes", movimentacaoDAO.listarUltimaMovimentacaoPorEquipamento());
+        }
+
+        request.setAttribute("ultimosIds",   movimentacaoDAO.buscarIdsUltimaMovimentacaoPorEquipamento());
+        request.setAttribute("exibirTodos",  exibirTodos);
         request.setAttribute("equipamentos", equipamentoDAO.listarEquipamentos());
-        request.setAttribute("unidades", unidadeDAO.listarUnidades());
-        request.setAttribute("usuarios", usuarioDAO.listarUsuarios());
+        request.setAttribute("unidades",     unidadeDAO.listarUnidades());
+        request.setAttribute("usuarios",     usuarioDAO.listarUsuarios());
 
         RequestDispatcher dispatcher =
                 request.getRequestDispatcher("/pages/movimentacoes.jsp");
@@ -394,5 +428,68 @@ public class MovimentacaoController extends HttpServlet {
         );
 
         return movimentacao;
+    }
+
+    // ==========================
+    // BUSCAR LOCALIZAÇÃO ATUAL (AJAX)
+    // ==========================
+
+    /**
+     * Responde requisições AJAX com a localização atual de um equipamento.
+     *
+     * REGRA DE NEGÓCIO:
+     * - Ao selecionar um equipamento no modal de nova movimentação,
+     *   o frontend consulta este endpoint para verificar se já existe
+     *   histórico de movimentações.
+     * - Se existir, retorna o último destino registrado (localização atual).
+     * - Se não existir, retorna indicativo para manter campo livre.
+     *
+     * RETORNO:
+     * - JSON com campos: encontrou (boolean), idUnidade (int), nomeUnidade (String).
+     *
+     * @param request  Requisição contendo parâmetro "id_equip".
+     * @param response Resposta JSON ao frontend.
+     */
+    private void buscarLocalizacaoEquipamento(HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        String idEquipStr = request.getParameter("id_equip");
+
+        // Validação do parâmetro recebido
+        if (idEquipStr == null || idEquipStr.trim().isEmpty()) {
+            out.print("{\"encontrou\": false}");
+            out.flush();
+            return;
+        }
+
+        try {
+            int idEquip = Integer.parseInt(idEquipStr.trim());
+            br.com.patrimweb.model.Unidade unidade =
+                    movimentacaoDAO.buscarUltimaUnidadeDestinoPorEquipamento(idEquip);
+
+            if (unidade != null) {
+                // Monta JSON com StringBuilder para evitar problemas de escaping
+                String nomeEscapado = unidade.getNomeUnid()
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"");
+                StringBuilder json = new StringBuilder();
+                json.append("{");
+                json.append("\"encontrou\": true,");
+                json.append("\"idUnidade\": ").append(unidade.getIdUnid()).append(",");
+                json.append("\"nomeUnidade\": \"").append(nomeEscapado).append("\"");
+                json.append("}");
+                out.print(json.toString());
+            } else {
+                out.print("{\"encontrou\": false}");
+            }
+
+        } catch (NumberFormatException e) {
+            out.print("{\"encontrou\": false}");
+        }
+
+        out.flush();
     }
 }

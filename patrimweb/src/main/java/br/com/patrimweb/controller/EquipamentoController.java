@@ -127,6 +127,9 @@ public class EquipamentoController extends HttpServlet {
                 case "adicionar":
                     adicionarEquipamento(request, response);
                     break;
+                case "adicionarLote":
+                    adicionarEquipamentoLote(request, response);
+                    break;
                 case "editar":
                     editarEquipamento(request, response);
                     break;
@@ -187,6 +190,59 @@ public class EquipamentoController extends HttpServlet {
     	}
 
         // Redireciona para evitar reenvio de formulário (Post-Redirect-Get)
+        response.sendRedirect(request.getContextPath() + "/EquipamentoController");
+    }
+
+
+    // ==========================
+    // ADICIONAR EM LOTE
+    // ==========================
+
+    /**
+     * Realiza a inserção de múltiplos equipamentos de uma vez (cadastro em lote).
+     *
+     * Regras de negócio:
+     * - O número de série é sempre null, pois equipamentos em lote não possuem
+     *   identificação individual no momento do cadastro.
+     * - A quantidade define quantas vezes o mesmo equipamento será inserido.
+     * - Cada inserção recebe um timestamp individual para rastreabilidade.
+     * - Em caso de falha parcial, a quantidade de sucessos é informada na mensagem.
+     *
+     * @param request  requisição contendo nome, fabricante e quantidade
+     * @param response resposta para redirecionamento
+     */
+    private void adicionarEquipamentoLote(HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+
+        String nomeEquip  = request.getParameter("nome_equip");
+        int idFabricante  = Integer.parseInt(request.getParameter("id_fabricante"));
+        int quantidade    = Integer.parseInt(request.getParameter("quantidade"));
+
+        Fabricante fabricante = fabricanteDAO.buscarPorId(idFabricante);
+
+        int inseridos = 0;
+
+        for (int i = 0; i < quantidade; i++) {
+            try {
+                // Número de série null: lote não possui série individual
+                Timestamp dataInsercao = Timestamp.valueOf(LocalDateTime.now());
+                Equipamento equipamento = new Equipamento(nomeEquip, null, fabricante, dataInsercao);
+                equipamentoDAO.adicionarEquipamento(equipamento);
+                inseridos++;
+            } catch (Exception e) {
+                // Registra falha individual sem interromper o lote inteiro
+                e.printStackTrace();
+            }
+        }
+
+        if (inseridos == quantidade) {
+            request.getSession().setAttribute("mensagemSucesso",
+                inseridos + " equipamento(s) cadastrado(s) em lote com sucesso!");
+        } else {
+            request.getSession().setAttribute("mensagemErro",
+                "Lote parcialmente inserido: " + inseridos + " de " + quantidade + " equipamentos foram cadastrados.");
+        }
+
         response.sendRedirect(request.getContextPath() + "/EquipamentoController");
     }
 

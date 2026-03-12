@@ -112,9 +112,14 @@
                         </button>
                     </a>
 
-                    <!-- Abre modal de cadastro -->
-                    <button class="btn btn-primary" onclick="openModal()">
+                    <!-- Abre modal de cadastro individual -->
+                    <button class="btn btn-primary" onclick="openModal(false)">
                         <i class="fa-solid fa-plus"></i> Novo Equipamento
+                    </button>
+
+                    <!-- Abre modal de cadastro em lote -->
+                    <button class="btn btn-primary" onclick="openModal(true)">
+                        <i class="fa-solid fa-layer-group"></i> Cadastrar em Lote
                     </button>
                 </div>
             </div>
@@ -185,28 +190,39 @@
 <div id="modalCadastro" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
-            <h3 class="modal-title">Cadastrar Novo Equipamento</h3>
+            <h3 class="modal-title" id="modalCadastroTitulo">Cadastrar Novo Equipamento</h3>
             <button class="close-modal" onclick="closeModal()">&times;</button>
         </div>
         <div class="modal-body">
 
             <!-- 
                 Formulário enviado via POST para EquipamentoController
-                action=adicionar define operação no backend
+                action=adicionar  → cadastro individual
+                action=adicionarLote → cadastro em lote (sem número de série)
             -->
             <form id="formEquipamento" action="${pageContext.request.contextPath}/EquipamentoController" method="post">
-                <input type="hidden" name="action" value="adicionar">
+                <input type="hidden" name="action" id="formAction" value="adicionar">
 
-                <!-- Campo obrigatório para nome do equipamento -->
                 <div class="form-group full-width">
                     <label class="form-label">Nome do Equipamento</label>
                     <input type="text" name="nome_equip" class="form-input" placeholder="Ex: Notebook Dell Inspiron" required>
-                    <label class="form-label">Número de Série</label>
-                    <input type="text" name="numero_equip" class="form-input" placeholder="Ex: NZ582564XE" required>
+
+                    <!-- Número de série: visível apenas no cadastro individual -->
+                    <div id="grupoNumSerie">
+                        <label class="form-label">Número de Série</label>
+                        <input type="text" name="numero_equip" id="campo_numero_equip"
+                               class="form-input" placeholder="Ex: NZ582564XE">
+                    </div>
+
+                    <!-- Quantidade: visível apenas no cadastro em lote -->
+                    <div id="grupoQuantidade" style="display:none;">
+                        <label class="form-label">Quantidade</label>
+                        <input type="number" name="quantidade" id="campo_quantidade"
+                               class="form-input" placeholder="Ex: 10" min="2" max="999">
+                    </div>
                 </div>
 
                 <!-- Seleção de fabricante -->
-                <!-- Lista dinâmica proveniente do backend -->
                 <div class="form-group full-width">
 				    <label class="form-label">Fabricante</label>
 				    <select name="id_fabricante" class="form-input" required>
@@ -280,9 +296,48 @@
     const modal = document.getElementById('modalCadastro');
     const modalEditar = document.getElementById('modalEditar');
 
-    // Controle de abertura/fechamento do modal de cadastro
-    function openModal() { modal.classList.add('show'); }
-    function closeModal() { modal.classList.remove('show'); }
+    /**
+     * Abre o modal de cadastro.
+     * @param {boolean} lote - true = cadastro em lote, false = cadastro individual
+     */
+    function openModal(lote) {
+        const titulo        = document.getElementById('modalCadastroTitulo');
+        const formAction    = document.getElementById('formAction');
+        const grupoNumSerie = document.getElementById('grupoNumSerie');
+        const grupoQtd      = document.getElementById('grupoQuantidade');
+        const campoNumSerie = document.getElementById('campo_numero_equip');
+        const campoQtd      = document.getElementById('campo_quantidade');
+
+        if (lote) {
+            titulo.textContent        = 'Cadastrar Equipamentos em Lote';
+            formAction.value          = 'adicionarLote';
+            // Oculta série e remove obrigatoriedade
+            grupoNumSerie.style.display = 'none';
+            campoNumSerie.disabled      = true;
+            campoNumSerie.required      = false;
+            // Exibe quantidade e torna obrigatória
+            grupoQtd.style.display    = 'block';
+            campoQtd.required         = true;
+        } else {
+            titulo.textContent        = 'Cadastrar Novo Equipamento';
+            formAction.value          = 'adicionar';
+            // Exibe série
+            grupoNumSerie.style.display = 'block';
+            campoNumSerie.disabled      = false;
+            campoNumSerie.required      = false; // série é opcional (null quando vazio)
+            // Oculta quantidade
+            grupoQtd.style.display    = 'none';
+            campoQtd.required         = false;
+        }
+
+        modal.classList.add('show');
+    }
+
+    function closeModal() {
+        modal.classList.remove('show');
+        // Reseta o formulário ao fechar
+        document.getElementById('formEquipamento').reset();
+    }
 
     /*
         Função responsável por preencher o modal de edição.

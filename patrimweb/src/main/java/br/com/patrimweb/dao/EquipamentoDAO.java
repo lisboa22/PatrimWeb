@@ -123,7 +123,7 @@ public class EquipamentoDAO {//Declaração da classe EquipamentoDAO, responsáv
 		    
 		    // SQL com INNER JOIN para buscar dados do Equipamento e do Fabricante juntos
 		    String sql = "SELECT e.*, f.nome_fab FROM equipamento e " +
-		                 "INNER JOIN fabricante f ON e.fabricante = f.id_fab";
+		                 "INNER JOIN fabricante f ON e.fabricante = f.id_fab ORDER BY e.id_equip ASC";
 		    
 		    PreparedStatement stmt = conexao.prepareStatement(sql);
 		    ResultSet rs = stmt.executeQuery();

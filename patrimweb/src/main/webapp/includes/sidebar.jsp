@@ -72,14 +72,6 @@
         </a>
 
         <%--
-            Acesso ao módulo de Equipamentos.
-            Controller responsável: EquipamentoController.
-        --%>
-        <a href="${pageContext.request.contextPath}/EquipamentoController" class="nav-item ${pageTitle == 'Equipamentos' ? 'active' : ''}">
-            <i class="fa-solid fa-computer"></i> Equipamentos
-        </a>
-
-        <%--
             Acesso ao gerenciamento de usuários do sistema.
             Controller responsável: UsuarioController.
 
@@ -96,6 +88,17 @@
             </a>
         </c:if>
 
+		<c:if test="${not empty sessionScope.usuarioLogado
+                      and not empty sessionScope.usuarioLogado.perfilUsu
+                      and sessionScope.usuarioLogado.perfilUsu.nomePerfil ne 'VISITANTE'}">
+         <%--
+            Acesso ao módulo de Equipamentos.
+            Controller responsável: EquipamentoController.
+        --%>
+        <a href="${pageContext.request.contextPath}/EquipamentoController" class="nav-item ${pageTitle == 'Equipamentos' ? 'active' : ''}">
+            <i class="fa-solid fa-computer"></i> Equipamentos
+        </a>
+        
         <%--
             Acesso ao cadastro e gerenciamento de unidades
             organizacionais ou locais vinculados ao patrimônio.
@@ -123,6 +126,12 @@
             <i class="fa-solid fa-truck-moving"></i> Movimentações
         </a>
         
+        <a href="${pageContext.request.contextPath}/ConfiguracaoController" class="nav-item ${pageTitle == 'Configurações' ? 'active' : ''}">
+            <i class="fa-solid fa-gear"></i> Configurações
+        </a>
+        
+        </c:if>
+        
         <%--
             ─────────────────────────────────────────────────────
             SEÇÃO ADMINISTRATIVA — visível apenas para ADMINISTRADOR
@@ -140,9 +149,9 @@
                 <i class="fa-solid fa-shield-halved"></i> Perfis
             </a>
 
-            <a href="${pageContext.request.contextPath}/PermissaoController" class="nav-item ${pageTitle == 'Permissões' ? 'active' : ''}">
+            <!--  <a href="${pageContext.request.contextPath}/PermissaoController" class="nav-item ${pageTitle == 'Permissões' ? 'active' : ''}">
                 <i class="fa-solid fa-key"></i> Permissões
-            </a>
+            </a>-->
 
             <%--
                 Acesso ao módulo de Configurações do sistema.
@@ -152,9 +161,7 @@
                 Permite gerenciamento de perfil do usuário e parâmetros do sistema.
                 Controller responsável: ConfiguracaoController.
             --%>
-            <a href="${pageContext.request.contextPath}/ConfiguracaoController" class="nav-item ${pageTitle == 'Configurações' ? 'active' : ''}">
-                <i class="fa-solid fa-gear"></i> Configurações
-            </a>
+            
 
         </c:if>
     </ul>

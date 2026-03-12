@@ -3,10 +3,20 @@ package br.com.patrimweb.controller;
 import br.com.patrimweb.dao.PerfilDAO;
 import br.com.patrimweb.dao.PerfilPermissaoDAO;
 import br.com.patrimweb.dao.PermissaoDAO;
+import br.com.patrimweb.dao.UsuarioDAO;
 import br.com.patrimweb.model.Usuario;
 import br.com.patrimweb.utils.Conexao;
+import br.com.patrimweb.utils.SenhaUtils;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import javax.imageio.ImageIO;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.util.Arrays;
 import java.util.List;
@@ -30,11 +40,16 @@ import javax.servlet.http.HttpSession;
  *   GET  action=limparCache    → limpa cache do sistema
  *   GET  action=resetarConf... → reseta configurações de fábrica
  *   POST action=atualizarPerfil   → atualiza dados pessoais do usuário logado
+ *   POST action=atualizarFoto     → faz upload e salva a foto de perfil
  *   POST action=alterarSenha      → altera senha do usuário logado
  *   POST action=salvarPermissoes  → salva permissões de um perfil via AJAX
  * =====================================================================================
  */
 @WebServlet("/ConfiguracaoController")
+@javax.servlet.annotation.MultipartConfig(
+    maxFileSize    = 5 * 1024 * 1024,   // 5 MB por arquivo
+    maxRequestSize = 6 * 1024 * 1024    // 6 MB por requisição completa
+)
 public class ConfiguracaoController extends HttpServlet {
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -45,6 +60,26 @@ public class ConfiguracaoController extends HttpServlet {
     private static final String REDIRECT_DASHBOARD = "/DashboardController";
     private static final String REDIRECT_LOGIN     = "index.jsp";
     private static final String PERFIL_ADMIN       = "ADMINISTRADOR";
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Constantes de upload de foto
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Subpasta dentro do webapp onde as fotos de perfil são salvas.
+     *
+     * O caminho físico real é resolvido no método processarAtualizarFoto()
+     * usando getServletContext().getRealPath(), que retorna o local exato
+     * onde o Tomcat fez o deploy da aplicação — incluindo durante o
+     * desenvolvimento no Eclipse, apontando para a pasta do projeto.
+     */
+    private static final String PASTA_FOTOS = "imagens/perfil/";
+
+    /** Formatos aceitos para foto de perfil */
+    private static final java.util.Set<String> TIPOS_PERMITIDOS =
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    "image/jpeg", "image/png", "image/webp"
+            ));
 
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -128,6 +163,9 @@ public class ConfiguracaoController extends HttpServlet {
         switch (action) {
             case "atualizarPerfil":
                 processarAtualizarPerfil(request, response, session);
+                break;
+            case "atualizarFoto":
+                processarAtualizarFoto(request, response, session);
                 break;
             case "alterarSenha":
                 processarAlterarSenha(request, response, session);
@@ -230,7 +268,176 @@ public class ConfiguracaoController extends HttpServlet {
 
 
     /**
+     * AÇÃO POST: atualizarFoto
+     *
+     * Salva a foto de perfil na pasta webapp/imagens/perfil/ — SEM alterar o banco.
+     *
+     * ESTRATÉGIA DE NOME DE ARQUIVO:
+     *   O arquivo é sempre salvo como "{id_usu}.{extensão}" — ex: "42.jpg".
+     *   Como o nome é derivado do ID (que já está na sessão), não é preciso
+     *   guardar nada no banco. O JSP monta a URL diretamente com o ID.
+     *
+     * COMO O CAMINHO É RESOLVIDO:
+     *   getServletContext().getRealPath() converte o caminho relativo dentro
+     *   do webapp para o caminho físico real no disco do servidor.
+     *   Isso funciona automaticamente no Tomcat em qualquer sistema operacional.
+     *
+     * CACHE DO NAVEGADOR:
+     *   Como o arquivo tem nome fixo (ex: "42.jpg"), sem controle o browser
+     *   exibiria a foto antiga após uma troca. Para evitar isso, gravamos um
+     *   timestamp na sessão e o JSP o usa como ?v= na URL da imagem.
+     *   URL diferente = browser busca imagem nova.
+     *
+     * FLUXO:
+     *   1. Valida tipo (JPEG, PNG, WEBP) e tamanho (máx 5 MB)
+     *   2. Resolve o caminho físico da pasta via getRealPath()
+     *   3. Cria as pastas imagens/perfil/ automaticamente se não existirem
+     *   4. Apaga arquivos antigos do mesmo usuário (outras extensões)
+     *   5. Salva o novo arquivo como "{id_usu}.{extensão}"
+     *   6. Grava o timestamp na sessão para quebrar o cache do navegador
+     */
+    private void processarAtualizarFoto(HttpServletRequest request,
+                                         HttpServletResponse response,
+                                         HttpSession session)
+            throws IOException, ServletException {
+
+        Usuario usuarioLogado = (Usuario) session.getAttribute("usuarioLogado");
+
+        // ── 1. Recupera o arquivo enviado pelo formulário ─────────────────────
+        javax.servlet.http.Part fotoPart = request.getPart("foto_perfil");
+
+        if (fotoPart == null || fotoPart.getSize() == 0) {
+            session.setAttribute("mensagemErro", "Nenhum arquivo selecionado.");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+            return;
+        }
+
+        // ── 2. Valida o tipo MIME ─────────────────────────────────────────────
+        String contentType = fotoPart.getContentType();
+        if (contentType == null || !TIPOS_PERMITIDOS.contains(contentType.toLowerCase())) {
+            session.setAttribute("mensagemErro",
+                    "Formato inválido. Use apenas JPG, PNG ou WEBP.");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+            return;
+        }
+
+        // ── 3. Valida o tamanho ───────────────────────────────────────────────
+        if (fotoPart.getSize() > 5 * 1024 * 1024) {
+            session.setAttribute("mensagemErro",
+                    "Arquivo muito grande. O tamanho máximo permitido é 5 MB.");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+            return;
+        }
+
+        // ── 4. Define o caminho físico da pasta imagens/perfil/ ──────────────
+        //
+        //      O caminho é construído a partir da variável de sistema
+        //      "user.home" — que no Windows retorna automaticamente:
+        //        C:\Users\{usuario_logado_no_windows}
+        //
+        //      A partir daí completamos com o restante do caminho do projeto.
+        //      Estrutura do projeto confirmada:
+        //        {user.home}\patrimweb\patrimweb\src\main\webapp\imagens\perfil
+        //
+        //      Vantagem: funciona em qualquer máquina Windows sem precisar
+        //      digitar o nome do usuário fixo no código, pois "user.home"
+        //      é resolvido automaticamente pelo sistema operacional.
+        String userHome = System.getProperty("user.home");
+
+        // ── Pasta 1: projeto real — arquivo permanente, não se perde no redeploy
+        Path diretorioProjeto = Paths.get(userHome,
+                                          "patrimweb",
+                                          "patrimweb",
+                                          "src", "main", "webapp",
+                                          "imagens", "perfil");
+
+        // ── Pasta 2: deploy do Tomcat — arquivo servido estaticamente pelo browser
+        //    getRealPath() aponta para a pasta temporária do Tomcat, que é exatamente
+        //    de onde o browser busca arquivos estáticos como /imagens/perfil/1.jpg
+        String caminhoTomcat  = getServletContext().getRealPath("imagens/perfil/");
+        Path   diretorioTomcat = Paths.get(caminhoTomcat);
+
+        // ── 5. Cria as pastas nas dois locais se não existirem ────────────────
+        Files.createDirectories(diretorioProjeto);
+        Files.createDirectories(diretorioTomcat);
+
+        // ── 6. Define o nome do arquivo: sempre salvo como "{id_usu}.jpg" ──────
+        //      Independentemente do formato enviado (PNG, WEBP, JPEG), a imagem
+        //      é convertida para JPEG antes de salvar, garantindo compatibilidade
+        //      total com o JSP e com todos os navegadores.
+        String nomeArquivo = usuarioLogado.getIdUsu() + ".jpg";
+
+        // ── 7. Apaga arquivos antigos nas duas pastas (todas as extensões) ─────
+        for (String ext : new String[]{"jpg", "png", "webp"}) {
+            try {
+                Files.deleteIfExists(diretorioProjeto.resolve(usuarioLogado.getIdUsu() + "." + ext));
+                Files.deleteIfExists(diretorioTomcat.resolve(usuarioLogado.getIdUsu() + "." + ext));
+            } catch (IOException ex) {
+                System.err.println("[PatrimWeb] Aviso: não foi possível apagar foto anterior: "
+                        + ex.getMessage());
+            }
+        }
+
+        // ── 8. Converte a imagem recebida para JPEG e obtém os bytes ─────────
+        //      Qualquer formato suportado (PNG, WEBP, JPEG) é lido via ImageIO,
+        //      desenhado num BufferedImage com fundo branco (para preservar
+        //      transparências de PNG/WEBP) e re-codificado como JPEG.
+        byte[] bytesImagem;
+        try (InputStream input = fotoPart.getInputStream();
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            BufferedImage imagemOriginal = ImageIO.read(input);
+
+            if (imagemOriginal == null) {
+                session.setAttribute("mensagemErro",
+                        "Não foi possível processar a imagem. Verifique se o arquivo não está corrompido.");
+                response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+                return;
+            }
+
+            // Cria canvas RGB com fundo branco para acomodar transparência de PNG/WEBP
+            BufferedImage imagemJpg = new BufferedImage(
+                    imagemOriginal.getWidth(),
+                    imagemOriginal.getHeight(),
+                    BufferedImage.TYPE_INT_RGB);
+            imagemJpg.createGraphics().drawImage(imagemOriginal, 0, 0,
+                    java.awt.Color.WHITE, null);
+
+            // Codifica como JPEG
+            boolean escrito = ImageIO.write(imagemJpg, "jpg", baos);
+            if (!escrito) {
+                session.setAttribute("mensagemErro",
+                        "Erro ao converter a imagem para JPG. Tente outro arquivo.");
+                response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+                return;
+            }
+
+            bytesImagem = baos.toByteArray();
+        }
+
+        // ── 9. Salva o JPEG convertido nas duas pastas ────────────────────────
+        // Salva no projeto (permanente)
+        Files.write(diretorioProjeto.resolve(nomeArquivo), bytesImagem);
+
+        // Salva no Tomcat (para servir estaticamente via /imagens/perfil/)
+        Files.write(diretorioTomcat.resolve(nomeArquivo), bytesImagem);
+
+        // ── 10. Grava timestamp na sessão para forçar reload da imagem ────────
+        //      O JSP usa como ?v={timestamp} na URL, fazendo o browser ignorar
+        //      o cache e buscar a foto nova.
+        session.setAttribute("fotoPerfil_v", System.currentTimeMillis());
+        session.setAttribute("mensagemSucesso", "Foto de perfil atualizada com sucesso!");
+
+        response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+    }
+
+
+    /**
      * AÇÃO POST: atualizarPerfil
+     *
+     * Atualiza os dados pessoais do usuário logado (nome, e-mail, telefone,
+     * CPF e endereço). O cargo/perfil é mantido intacto — não é recebido
+     * pelo formulário e não é passado ao DAO.
      */
     private void processarAtualizarPerfil(HttpServletRequest request,
                                            HttpServletResponse response,
@@ -240,6 +447,8 @@ public class ConfiguracaoController extends HttpServlet {
         String nomeUsu     = request.getParameter("nome_usu");
         String emailUsu    = request.getParameter("email_usu");
         String telefoneUsu = request.getParameter("telefone_usu");
+        String cpfUsu      = request.getParameter("cpf_usu");
+        String enderecoUsu = request.getParameter("endereco_usu");
 
         if (nomeUsu == null || nomeUsu.trim().isEmpty()
                 || emailUsu == null || emailUsu.trim().isEmpty()) {
@@ -250,22 +459,22 @@ public class ConfiguracaoController extends HttpServlet {
             return;
         }
 
-        try {
+        try (Connection conn = Conexao.getConnection()) {
+
             Usuario usuarioLogado = (Usuario) session.getAttribute("usuarioLogado");
 
+            // Atualiza os dados editáveis no objeto de sessão
             usuarioLogado.setNomeUsu(nomeUsu.trim());
             usuarioLogado.setEmailUsu(emailUsu.trim());
+            usuarioLogado.setTelefoneUsu(telefoneUsu != null ? telefoneUsu.trim() : "");
+            usuarioLogado.setCpfUsu(cpfUsu != null ? cpfUsu.trim() : "");
+            usuarioLogado.setEnderecoUsu(enderecoUsu != null ? enderecoUsu.trim() : "");
 
-            if (telefoneUsu != null && !telefoneUsu.trim().isEmpty()) {
-                usuarioLogado.setTelefoneUsu(telefoneUsu.trim());
-            }
+            // Persiste apenas os campos pessoais — senha e perfil/cargo não são alterados
+            UsuarioDAO usuarioDAO = new UsuarioDAO(conn);
+            usuarioDAO.atualizarDadosPerfil(usuarioLogado);
 
-            /*
-             * TODO: Chamar DAO para persistir no banco.
-             *   UsuarioDAO usuarioDAO = new UsuarioDAO(conn);
-             *   usuarioDAO.atualizar(usuarioLogado);
-             */
-
+            // Atualiza o objeto na sessão com os novos dados
             session.setAttribute("usuarioLogado", usuarioLogado);
             session.setAttribute("mensagemSucesso", "Perfil atualizado com sucesso!");
 
@@ -286,6 +495,17 @@ public class ConfiguracaoController extends HttpServlet {
                                         HttpSession session)
             throws IOException {
 
+        // Obtém o usuário logado da sessão (necessário em todas as validações abaixo)
+        Usuario usuarioLogado = (Usuario) session.getAttribute("usuarioLogado");
+
+        // Bloqueia alteração de senha para usuários que autenticam via Google
+        if (usuarioLogado != null && usuarioLogado.getLoginGoogle()) {
+            session.setAttribute("mensagemErro",
+                    "Usuários que fazem login com o Google não podem alterar a senha por aqui.");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
+            return;
+        }
+
         String senhaAtual     = request.getParameter("senha_atual");
         String novaSenha      = request.getParameter("nova_senha");
         String confirmarSenha = request.getParameter("confirmar_senha");
@@ -295,32 +515,47 @@ public class ConfiguracaoController extends HttpServlet {
                 || confirmarSenha == null || confirmarSenha.isEmpty()) {
 
             session.setAttribute("mensagemErro", "Todos os campos de senha são obrigatórios.");
-            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
             return;
         }
 
         if (!novaSenha.equals(confirmarSenha)) {
             session.setAttribute("mensagemErro",
                     "A nova senha e a confirmação não correspondem.");
-            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
             return;
         }
 
         if (novaSenha.length() < 6) {
             session.setAttribute("mensagemErro",
                     "A nova senha deve ter no mínimo 6 caracteres.");
-            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+            response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
             return;
         }
 
-        try {
-            /*
-             * TODO: Validar senha atual e persistir nova senha (com hash).
-             *   UsuarioDAO usuarioDAO = new UsuarioDAO(conn);
-             *   boolean ok = usuarioDAO.validarSenha(usuarioLogado.getIdUsu(), senhaAtual);
-             *   if (!ok) { session.setAttribute("mensagemErro", "Senha atual incorreta."); ... }
-             *   usuarioDAO.alterarSenha(usuarioLogado.getIdUsu(), novaSenha);
-             */
+        try (Connection conn = Conexao.getConnection()) {
+
+            UsuarioDAO usuarioDAO = new UsuarioDAO(conn);
+
+            // 1. Busca o hash atual gravado no banco para este usuário
+            String hashAtual = usuarioDAO.buscarHashSenha(usuarioLogado.getIdUsu());
+
+            if (hashAtual == null) {
+                session.setAttribute("mensagemErro", "Usuário não encontrado. Faça login novamente.");
+                response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
+                return;
+            }
+
+            // 2. Verifica se a senha atual digitada corresponde ao hash do banco (BCrypt)
+            if (!SenhaUtils.verificar(senhaAtual, hashAtual)) {
+                session.setAttribute("mensagemErro", "Senha atual incorreta. Verifique e tente novamente.");
+                response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
+                return;
+            }
+
+            // 3. Criptografa a nova senha em BCrypt e persiste no banco
+            String novoHash = SenhaUtils.criptografar(novaSenha);
+            usuarioDAO.alterarSenha(usuarioLogado.getIdUsu(), novoHash);
 
             session.setAttribute("mensagemSucesso", "Senha alterada com sucesso!");
 
@@ -329,7 +564,7 @@ public class ConfiguracaoController extends HttpServlet {
                     "Erro ao alterar a senha: " + e.getMessage());
         }
 
-        response.sendRedirect(request.getContextPath() + "/ConfiguracaoController");
+        response.sendRedirect(request.getContextPath() + "/ConfiguracaoController?aba=seguranca");
     }
 
 

@@ -21,7 +21,9 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 
+import br.com.patrimweb.dao.PerfilDAO;
 import br.com.patrimweb.dao.UsuarioDAO;
+import br.com.patrimweb.model.Perfil;
 import br.com.patrimweb.model.Usuario;
 import br.com.patrimweb.utils.Conexao;
 
@@ -123,6 +125,8 @@ public class LoginGoogleController extends HttpServlet {
                 // Busca usuário pelo e-mail retornado pelo Google
                 Usuario usuario = usuarioDAO.buscarPorEmail(email);
 
+                Connection conexao = Conexao.getConnection();
+                PerfilDAO perfilDAO = new PerfilDAO(conn);
                 // ------------------------------------------------------------
                 // Regra de negócio:
                 // Se o usuário não existir, ele é criado automaticamente.
@@ -133,6 +137,8 @@ public class LoginGoogleController extends HttpServlet {
                     usuario.setEmailUsu(email);
                     usuario.setLoginGoogle(true);
                     usuario.setDataInsercao(dataInsercao);
+                    Perfil perfil = perfilDAO.buscarPorId(2);
+                    usuario.setPerfilUsu(perfil);
 
                     usuarioDAO.adicionarUsuario(usuario);
 

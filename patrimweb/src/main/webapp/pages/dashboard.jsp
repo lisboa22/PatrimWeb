@@ -59,7 +59,14 @@
             </button>
             
             <!-- Título dinâmico da página -->
-            <h1>${pageTitle}</h1>
+            <h1>${pageTitle}</h1> 
+            
+            <c:if test="${not empty sessionScope.usuarioLogado
+                      and not empty sessionScope.usuarioLogado.perfilUsu
+                      and sessionScope.usuarioLogado.perfilUsu.nomePerfil eq 'VISITANTE'}">
+                      
+            <spam>Acessso de VISITANTE solicite sua permissão a suporte@patrimweb.com.br.</spam>
+            </c:if>
             
             <!-- INCLUIR MENU DE USUÁRIO -->
             <!-- Componente responsável por informações do usuário logado -->

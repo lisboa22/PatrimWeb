@@ -7,6 +7,7 @@ import br.com.patrimweb.model.Perfil;
 import br.com.patrimweb.model.Usuario;
 import br.com.patrimweb.utils.Conexao;
 import br.com.patrimweb.utils.SenhaUtils; // ✅ Import da classe utilitária de criptografia
+import br.com.patrimweb.utils.CpfUtils;   // ✅ Import da classe utilitária de validação de CPF
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -201,6 +202,15 @@ public class UsuarioController extends HttpServlet {
         try {
 	    	String nomeUsu = request.getParameter("nome_usu");
 	        String cpfUsu = request.getParameter("cpf_usu");
+
+	        // ✅ Validação do CPF antes de prosseguir com o cadastro
+	        if (!CpfUtils.isValido(cpfUsu)) {
+	            request.getSession().setAttribute("mensagemErro",
+	                "CPF inválido. Verifique o número informado e tente novamente.");
+	            response.sendRedirect(request.getContextPath() + "/UsuarioController");
+	            return;
+	        }
+
 	        String telefoneUsu = request.getParameter("telefone_usu");
 	        String emailUsu = request.getParameter("email_usu");
 	        String enderecoUsu = request.getParameter("endereco_usu");
@@ -305,6 +315,15 @@ public class UsuarioController extends HttpServlet {
             int idUsu           = Integer.parseInt(request.getParameter("id_usu"));
             String nomeUsu      = request.getParameter("nome_usu");
             String cpfUsu       = request.getParameter("cpf_usu");
+
+            // ✅ Validação do CPF antes de prosseguir com a edição
+            if (!CpfUtils.isValido(cpfUsu)) {
+                request.getSession().setAttribute("mensagemErro",
+                    "CPF inválido. Verifique o número informado e tente novamente.");
+                response.sendRedirect(request.getContextPath() + "/UsuarioController");
+                return;
+            }
+
             String telefoneUsu  = request.getParameter("telefone_usu_edt"); // ✅ nome correto conforme o formulário JSP
             String emailUsu     = request.getParameter("email_usu");
             String enderecoUsu  = request.getParameter("endereco_usu_edt"); // ✅ nome correto conforme o formulário JSP

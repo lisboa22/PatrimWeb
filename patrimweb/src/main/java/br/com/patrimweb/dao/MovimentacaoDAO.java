@@ -7,7 +7,9 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import br.com.patrimweb.model.Equipamento;
 import br.com.patrimweb.model.Fabricante;
@@ -342,6 +344,7 @@ public class MovimentacaoDAO {
           + "    m.data_insercao       AS data_hora, "
           + "    e.id_equip            AS id_equipamento, "
           + "    e.nome_equip          AS nome_equipamento, "
+          + "    e.num_serie_equip     AS numero_serie, "
           + "    e.fabricante          AS id_fabricante, "
           + "    f.nome_fab            AS nome_fabricante, "
           + "    uo.id_unid            AS id_origem, "
@@ -401,6 +404,7 @@ public class MovimentacaoDAO {
             Equipamento equip = new Equipamento();
             equip.setIdEquip(rs.getInt("id_equipamento"));
             equip.setNomeEquip(rs.getString("nome_equipamento"));
+            equip.setNumSerieEquip(rs.getString("numero_serie"));
             
             Fabricante fabricante = new Fabricante();
             fabricante.setIdFab(rs.getInt("id_fabricante"));
@@ -597,6 +601,121 @@ public class MovimentacaoDAO {
         rs.close();
         stmt.close();
         
+        return movimentacoes;
+    }
+
+    /**
+     * Busca a última unidade de destino registrada para um equipamento específico.
+     *
+     * Regra de negócio:
+     * - Ao registrar uma nova movimentação, a unidade de origem do equipamento
+     *   deve ser o último destino registrado para ele, pois é onde ele se encontra.
+     * - Retorna null caso o equipamento ainda não possua movimentações cadastradas.
+     *
+     * Interação com banco:
+     * - Ordena por id_mov DESC e limita a 1 resultado para obter o registro mais recente.
+     *
+     * @param idEquipamento ID do equipamento consultado.
+     * @return Unidade onde o equipamento se encontra atualmente, ou null se sem histórico.
+     * @throws Exception erro durante consulta SQL.
+     */
+    public Unidade buscarUltimaUnidadeDestinoPorEquipamento(int idEquipamento) throws Exception {
+        String sql = "SELECT u.id_unid, u.nome_unid "
+                   + "FROM movimentacao m "
+                   + "JOIN unidade u ON m.unidade_destino = u.id_unid "
+                   + "WHERE m.equipamento = ? "
+                   + "ORDER BY m.id_mov DESC "
+                   + "LIMIT 1";
+
+        PreparedStatement stmt = conexao.prepareStatement(sql);
+        stmt.setInt(1, idEquipamento);
+        ResultSet rs = stmt.executeQuery();
+
+        Unidade unidade = null;
+        if (rs.next()) {
+            unidade = new Unidade();
+            unidade.setIdUnid(rs.getInt("id_unid"));
+            unidade.setNomeUnid(rs.getString("nome_unid"));
+        }
+
+        rs.close();
+        stmt.close();
+        return unidade;
+    }
+
+    /**
+     * Retorna Set com o id_mov mais recente de cada equipamento.
+     * Usado pela JSP para habilitar/desabilitar botões por linha.
+     */
+    public Set<Integer> buscarIdsUltimaMovimentacaoPorEquipamento() throws Exception {
+        Set<Integer> ids = new HashSet<>();
+        String sql = "SELECT MAX(id_mov) AS ultimo_id FROM movimentacao GROUP BY equipamento";
+        PreparedStatement stmt = conexao.prepareStatement(sql);
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) { ids.add(rs.getInt("ultimo_id")); }
+        rs.close(); stmt.close();
+        return ids;
+    }
+
+    /**
+     * Lista apenas a movimentação mais recente de cada equipamento.
+     * Exibição padrão da tela (checkbox desmarcado).
+     */
+    public List<Movimentacao> listarUltimaMovimentacaoPorEquipamento() throws Exception {
+        List<Movimentacao> movimentacoes = new ArrayList<>();
+        String sql = "SELECT "
+                + "    m.id_mov AS id, m.tipo_movimentacao, "
+                + "    m.observacao AS observacoes, m.data_insercao AS data_hora, "
+                + "    e.id_equip AS id_equipamento, e.nome_equip AS nome_equipamento, "
+                + "    e.num_serie_equip AS numero_equipamento, "
+                + "    f.id_fab AS id_fabricante, f.nome_fab AS nome_fabricante, "
+                + "    uo.id_unid AS id_origem, uo.nome_unid AS unidade_origem, "
+                + "    ud.id_unid AS id_destino, ud.nome_unid AS unidade_destino, "
+                + "    ul.id_usu AS id_usuario_liberacao, ul.nome_usu AS nome_usuario_liberacao, "
+                + "    ur.id_usu AS id_usuario_recepcao, ur.nome_usu AS nome_usuario_recepcao "
+                + "FROM movimentacao m "
+                + "JOIN (SELECT equipamento, MAX(id_mov) AS ultimo_id FROM movimentacao GROUP BY equipamento) sub "
+                + "     ON m.equipamento = sub.equipamento AND m.id_mov = sub.ultimo_id "
+                + "JOIN equipamento e  ON m.equipamento     = e.id_equip "
+                + "JOIN fabricante f   ON e.fabricante      = f.id_fab "
+                + "JOIN unidade uo     ON m.unidade_origem  = uo.id_unid "
+                + "JOIN unidade ud     ON m.unidade_destino = ud.id_unid "
+                + "JOIN usuario ul     ON m.usuario_origem  = ul.id_usu "
+                + "JOIN usuario ur     ON m.usuario_destino = ur.id_usu "
+                + "ORDER BY m.id_mov DESC";
+        PreparedStatement stmt = conexao.prepareStatement(sql);
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) {
+            Equipamento equipamento = new Equipamento();
+            equipamento.setIdEquip(rs.getInt("id_equipamento"));
+            equipamento.setNomeEquip(rs.getString("nome_equipamento"));
+            equipamento.setNumSerieEquip(rs.getString("numero_equipamento"));
+            Fabricante fabricante = new Fabricante();
+            fabricante.setIdFab(rs.getInt("id_fabricante"));
+            fabricante.setNomeFab(rs.getString("nome_fabricante"));
+            Unidade unidade_origem = new Unidade();
+            unidade_origem.setIdUnid(rs.getInt("id_origem"));
+            unidade_origem.setNomeUnid(rs.getString("unidade_origem"));
+            Unidade unidade_destino = new Unidade();
+            unidade_destino.setIdUnid(rs.getInt("id_destino"));
+            unidade_destino.setNomeUnid(rs.getString("unidade_destino"));
+            Usuario usuario_liberacao = new Usuario();
+            usuario_liberacao.setIdUsu(rs.getInt("id_usuario_liberacao"));
+            usuario_liberacao.setNomeUsu(rs.getString("nome_usuario_liberacao"));
+            Usuario usuario_recepcao = new Usuario();
+            usuario_recepcao.setIdUsu(rs.getInt("id_usuario_recepcao"));
+            usuario_recepcao.setNomeUsu(rs.getString("nome_usuario_recepcao"));
+            Movimentacao mov = new Movimentacao(
+                rs.getInt("id"), equipamento, fabricante,
+                rs.getString("tipo_movimentacao"),
+                unidade_origem, usuario_liberacao,
+                unidade_destino, usuario_recepcao,
+                rs.getString("observacoes"), rs.getTimestamp("data_hora")
+            );
+            mov.setIdMov(rs.getInt("id"));
+            movimentacoes.add(mov);
+        }
+        rs.close(); stmt.close();
         return movimentacoes;
     }
 }

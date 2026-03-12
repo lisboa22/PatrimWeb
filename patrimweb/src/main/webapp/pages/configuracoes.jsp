@@ -87,16 +87,16 @@
                      BARRA DE ABAS
                      ================================================ -->
                 <div class="settings-tabs">
-                    <button class="tab-btn active" onclick="openTab(event, 'tab-perfil')">
+                    <button class="tab-btn active" data-aba="perfil" onclick="openTab(event, 'tab-perfil')">
                         <i class="fa-solid fa-user"></i> Perfil
                     </button>
-                    <!--  <button class="tab-btn" onclick="openTab(event, 'tab-notificacoes')">
+                    <!--  <button class="tab-btn" data-aba="notificacoes" onclick="openTab(event, 'tab-notificacoes')">
                         <i class="fa-solid fa-bell"></i> Notificacoes
+                    </button>-->
+                    <button class="tab-btn" data-aba="seguranca" onclick="openTab(event, 'tab-seguranca')">
+                        <i class="fa-solid fa-lock"></i> Segurança
                     </button>
-                    <button class="tab-btn" onclick="openTab(event, 'tab-seguranca')">
-                        <i class="fa-solid fa-lock"></i> Seguranca
-                    </button>
-                    <button class="tab-btn" onclick="openTab(event, 'tab-permissoes')">
+                    <!--<button class="tab-btn" data-aba="permissoes" onclick="openTab(event, 'tab-permissoes')">
                         <i class="fa-solid fa-shield-halved"></i> Permissões
                     </button>-->
                 </div>
@@ -108,9 +108,44 @@
                 <div id="tab-perfil" class="tab-content active">
                     <div class="profile-header">
                         <div class="profile-img-container">
-                            <img src="https://i.pravatar.cc/150?img=68" alt="Foto de Perfil" class="profile-img">
-                            <div class="profile-edit-badge"><i class="fa-solid fa-camera"></i></div>
+
+                            <%--
+                                Foto servida da pasta estatica: imagens/perfil/{idUsu}.jpg
+                                
+                                
+
+                                O parâmetro ?v= é o timestamp gravado na sessão quando
+                                o usuário troca a foto. Isso força o navegador a baixar
+                                a imagem nova em vez de exibir a versão em cache.
+
+                                Se o arquivo não existir, o onerror ativa o avatar
+                                com as iniciais do nome como fallback.
+                            --%>
+                            <c:set var="idUsu"    value="${sessionScope.usuarioLogado.idUsu}" />
+                            <c:set var="fotoVers" value="${not empty sessionScope.fotoPerfil_v ? sessionScope.fotoPerfil_v : '0'}" />
+
+                            <img id="previewFoto"
+                                 src="${pageContext.request.contextPath}/imagens/perfil/${idUsu}.jpg?v=${fotoVers}"
+                                 alt="Foto de Perfil"
+                                 class="profile-img"
+                                 onerror="this.style.display='none';document.getElementById('avatarFallback').style.display='flex';">
+
+                            <div id="avatarFallback" class="profile-img"
+                                 style="display:none;align-items:center;justify-content:center;
+                                        background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+                                        color:#fff;font-size:32px;font-weight:700;border-radius:50%">
+                                ${fn:toUpperCase(fn:substring(sessionScope.usuarioLogado.nomeUsu,0,1))}
+                            </div>
+
+                            <%-- Ícone de câmera — abre o seletor de arquivo ao clicar --%>
+                            <div class="profile-edit-badge"
+                                 onclick="document.getElementById('inputFoto').click()"
+                                 title="Alterar foto de perfil"
+                                 style="cursor:pointer">
+                                <i class="fa-solid fa-camera"></i>
+                            </div>
                         </div>
+
                         <div>
                             <h3 style="font-size:18px;font-weight:600">
                                 ${not empty sessionScope.usuarioLogado.nomeUsu ? sessionScope.usuarioLogado.nomeUsu : 'Usuário Admin'}
@@ -118,8 +153,33 @@
                             <p style="color:#6b7280;font-size:14px">
                                 ${not empty sessionScope.usuarioLogado.perfilUsu.nomePerfil ? sessionScope.usuarioLogado.perfilUsu.nomePerfil : 'Administrador do Sistema'}
                             </p>
+                            <%-- Mostra o nome do arquivo enquanto o upload acontece --%>
+                            <p id="lblArquivoSelecionado"
+                               style="display:none;font-size:12px;color:#3b82f6;margin-top:4px">
+                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                <span id="nomeArquivoSelecionado"></span>
+                            </p>
                         </div>
                     </div>
+
+                    <%--
+                        Formulário exclusivo de upload de foto.
+                        enctype="multipart/form-data" é obrigatório para envio de arquivo —
+                        sem ele o servidor recebe o campo vazio e o upload não funciona.
+                    --%>
+                    <form id="formFoto"
+                          action="${pageContext.request.contextPath}/ConfiguracaoController"
+                          method="post"
+                          enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="atualizarFoto">
+                        <%-- Input oculto — acionado pelo clique no ícone de câmera --%>
+                        <input type="file"
+                               id="inputFoto"
+                               name="foto_perfil"
+                               accept="image/jpeg,image/png,image/webp"
+                               style="display:none"
+                               onchange="previewESalvar(this)">
+                    </form>
                     <form id="formPerfil" action="${pageContext.request.contextPath}/ConfiguracaoController" method="post">
                         <input type="hidden" name="action" value="atualizarPerfil">
                         <div class="settings-grid">
@@ -142,15 +202,33 @@
                                        placeholder="(00) 00000-0000">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Cargo</label>
+                                <label class="form-label">CPF</label>
+                                <input type="text" name="cpf_usu" class="form-input"
+                                       value="${not empty sessionScope.usuarioLogado.cpfUsu ? sessionScope.usuarioLogado.cpfUsu : ''}"
+                                       placeholder="000.000.000-00"
+                                       maxlength="14">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Endereço</label>
+                                <input type="text" name="endereco_usu" class="form-input"
+                                       value="${not empty sessionScope.usuarioLogado.enderecoUsu ? sessionScope.usuarioLogado.enderecoUsu : ''}"
+                                       placeholder="Rua, número, bairro, cidade">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Cargo
+                                    <span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:6px">
+                                        <i class="fa-solid fa-lock" style="font-size:10px"></i> Alterável somente em Usuários
+                                    </span>
+                                </label>
                                 <input type="text" class="form-input"
                                        value="${not empty sessionScope.usuarioLogado.perfilUsu.nomePerfil ? sessionScope.usuarioLogado.perfilUsu.nomePerfil : ''}"
-                                       disabled style="background-color:#f3f4f6">
+                                       disabled style="background-color:#f3f4f6;cursor:not-allowed;color:#6b7280">
                             </div>
                         </div>
-                        <!-- <div style="margin-top:20px;text-align:right">
+                        <div style="margin-top:20px;text-align:right">
                             <button type="submit" class="btn btn-primary">Atualizar Perfil</button>
-                        </div> -->
+                        </div>
                     </form>
                 </div>
                 <!-- FIM ABA: PERFIL -->
@@ -190,27 +268,46 @@
                      ABA: SEGURANCA
                      ================================================ -->
                 <div id="tab-seguranca" class="tab-content">
-                    <div class="section-title">Alterar Senha</div>
-                    <form id="formSenha" action="${pageContext.request.contextPath}/ConfiguracaoController" method="post">
-                        <input type="hidden" name="action" value="alterarSenha">
-                        <div class="settings-grid">
-                            <div class="form-group">
-                                <label class="form-label">Senha Atual</label>
-                                <input type="password" name="senha_atual" class="form-input" required>
+
+                    <%-- Alteração de senha: visível apenas para usuários sem login Google --%>
+                    <c:choose>
+                        <c:when test="${not sessionScope.usuarioLogado.loginGoogle}">
+                            <div class="section-title">Alterar Senha</div>
+                            <form id="formSenha" action="${pageContext.request.contextPath}/ConfiguracaoController" method="post">
+                                <input type="hidden" name="action" value="alterarSenha">
+                                <div class="settings-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Senha Atual</label>
+                                        <input type="password" name="senha_atual" class="form-input"
+                                               placeholder="Digite sua senha atual" required>
+                                    </div>
+                                    <div></div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nova Senha</label>
+                                        <input type="password" name="nova_senha" class="form-input"
+                                               placeholder="Digite a nova senha" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Confirmar Nova Senha</label>
+                                        <input type="password" name="confirmar_senha" class="form-input"
+                                               placeholder="Repita a nova senha" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-outline" style="margin-top:10px">Atualizar Senha</button>
+                            </form>
+                        </c:when>
+                        <c:otherwise>
+                            <%-- Usuário Google: exibe aviso no lugar do formulário de senha --%>
+                            <div class="section-title">Alterar Senha</div>
+                            <div style="display:flex;align-items:center;gap:12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 18px;margin-bottom:24px;">
+                                <i class="fa-brands fa-google" style="color:#4285F4;font-size:22px;flex-shrink:0"></i>
+                                <p style="font-size:13px;color:#0369a1;margin:0;">
+                                    Sua conta utiliza o <strong>Login com Google</strong>. A senha é gerenciada diretamente pela sua conta Google e não pode ser alterada aqui.
+                                </p>
                             </div>
-                            <div></div>
-                            <div class="form-group">
-                                <label class="form-label">Nova Senha</label>
-                                <input type="password" name="nova_senha" class="form-input" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Confirmar Nova Senha</label>
-                                <input type="password" name="confirmar_senha" class="form-input" required>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-outline" style="margin-top:10px">Atualizar Senha</button>
-                    </form>
-                    <div class="danger-zone">
+                        </c:otherwise>
+                    </c:choose>
+                    <!--  <div class="danger-zone">
                         <div class="danger-title">
                             <i class="fa-solid fa-triangle-exclamation"></i> Zona de Perigo
                         </div>
@@ -228,7 +325,7 @@
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>-->
                 <!-- FIM ABA: SEGURANCA -->
 
 
@@ -475,6 +572,14 @@
             refreshContadores();
             var primeiro = document.querySelector('.perm-profile-item');
             if (primeiro) selecionarPerfil(primeiro);
+
+            // Abre a aba indicada pelo parâmetro ?aba= na URL (ex: após erro em Segurança)
+            var params  = new URLSearchParams(window.location.search);
+            var abaAlvo = params.get('aba');
+            if (abaAlvo) {
+                var btnAlvo = document.querySelector('.tab-btn[data-aba="' + abaAlvo + '"]');
+                if (btnAlvo) btnAlvo.click();
+            }
         });
 
 
@@ -580,6 +685,61 @@
             icon.className  = tipo === 'ok' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark';
             setTimeout(function () { toast.classList.add('show'); }, 10);
             setTimeout(function () { toast.classList.remove('show'); }, 3800);
+        }
+
+        /* ============================================================
+           UPLOAD DE FOTO DE PERFIL
+           ============================================================
+           Fluxo:
+             1. Usuário clica no ícone de câmera → abre o seletor de arquivo
+                (pode navegar para qualquer pasta do computador)
+             2. Ao selecionar, esta função valida tipo e tamanho no lado cliente
+                (validação rápida antes de enviar ao servidor)
+             3. Mostra preview imediato da foto escolhida
+             4. Submete o formulário automaticamente para o servidor
+        */
+        function previewESalvar(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            var arquivo = input.files[0];
+
+            // ── Validação no cliente (feedback rápido antes de enviar) ──
+            var tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+            if (tiposPermitidos.indexOf(arquivo.type) === -1) {
+                alert('Formato inválido. Use apenas JPG, PNG ou WEBP.');
+                input.value = '';
+                return;
+            }
+
+            var maxBytes = 5 * 1024 * 1024; // 5 MB
+            if (arquivo.size > maxBytes) {
+                alert('Arquivo muito grande. O tamanho máximo é 5 MB.');
+                input.value = '';
+                return;
+            }
+
+            // ── Preview imediato usando FileReader ──
+            //    FileReader lê o arquivo localmente (sem enviar ao servidor ainda)
+            //    e gera uma URL temporária para exibir a imagem na tela
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var preview   = document.getElementById('previewFoto');
+                var fallback  = document.getElementById('avatarFallback');
+                preview.src   = e.target.result;
+                preview.style.display  = 'block';
+                fallback.style.display = 'none';
+            };
+            reader.readAsDataURL(arquivo);
+
+            // ── Exibe nome do arquivo selecionado abaixo do nome do usuário ──
+            var lblContainer = document.getElementById('lblArquivoSelecionado');
+            var lblNome      = document.getElementById('nomeArquivoSelecionado');
+            lblNome.textContent    = arquivo.name;
+            lblContainer.style.display = 'block';
+
+            // ── Submete o formulário automaticamente ──
+            //    O servidor valida novamente (nunca confiar só no cliente)
+            document.getElementById('formFoto').submit();
         }
     </script>
 

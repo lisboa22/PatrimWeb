@@ -18,6 +18,8 @@
     Observações:
     - Acessível somente por ADMINISTRADOR (controle no PerfilController).
     - Os dados são fornecidos pelo Controller via atributo "listaPerfis".
+    - Perfis "ADMINISTRADOR" e "VISITANTE" são protegidos: botões de editar
+      e excluir ficam desabilitados para evitar alterações acidentais.
     ============================================================================
 -->
 
@@ -101,20 +103,48 @@
                                 </c:when>
                                 <c:otherwise>
                                     <c:forEach var="p" items="${perfis}">
+                                        <%-- Perfis protegidos: ADMINISTRADOR e VISITANTE não podem ser editados/excluídos --%>
+                                        <c:set var="isProtegido"
+                                               value="${p.nomePerfil eq 'ADMINISTRADOR' or p.nomePerfil eq 'VISITANTE'}" />
                                         <tr>
                                             <td>${p.idPerfil}</td>
                                             <td>
                                                 <span class="badge-perfil">${p.nomePerfil}</span>
+                                                <c:if test="${isProtegido}">
+                                                    <i class="fa-solid fa-lock"
+                                                       title="Perfil protegido do sistema"
+                                                       style="color: var(--text-muted); font-size: 11px; margin-left: 6px;"></i>
+                                                </c:if>
                                             </td>
                                             <td style="text-align: center;">
-                                                <button class="btn-icon" title="Editar"
-                                                    onclick="openModalEditar('${p.idPerfil}', '${p.nomePerfil}')">
-                                                    <i class="fa-solid fa-pen"></i>
-                                                </button>
-                                                <button class="btn-icon delete" title="Excluir"
-                                                    onclick="excluirPerfil(${p.idPerfil})">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
+                                                <c:choose>
+                                                    <c:when test="${isProtegido}">
+                                                        <%-- Botões desabilitados para perfis protegidos --%>
+                                                        <button class="btn-icon"
+                                                                title="Perfil protegido — edição não permitida"
+                                                                disabled
+                                                                style="opacity: .35; cursor: not-allowed;">
+                                                            <i class="fa-solid fa-pen"></i>
+                                                        </button>
+                                                        <button class="btn-icon delete"
+                                                                title="Perfil protegido — exclusão não permitida"
+                                                                disabled
+                                                                style="opacity: .35; cursor: not-allowed;">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <%-- Botões normais para demais perfis --%>
+                                                        <button class="btn-icon" title="Editar"
+                                                            onclick="openModalEditar('${p.idPerfil}', '${p.nomePerfil}')">
+                                                            <i class="fa-solid fa-pen"></i>
+                                                        </button>
+                                                        <button class="btn-icon delete" title="Excluir"
+                                                            onclick="excluirPerfil(${p.idPerfil})">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </td>
                                         </tr>
                                     </c:forEach>
