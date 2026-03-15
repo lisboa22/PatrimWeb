@@ -149,9 +149,9 @@
                 <i class="fa-solid fa-shield-halved"></i> Perfis
             </a>
 
-            <!--  <a href="${pageContext.request.contextPath}/PermissaoController" class="nav-item ${pageTitle == 'Permissões' ? 'active' : ''}">
+              <a href="${pageContext.request.contextPath}/PermissaoController" class="nav-item ${pageTitle == 'Permissões' ? 'active' : ''}">
                 <i class="fa-solid fa-key"></i> Permissões
-            </a>-->
+            </a>
 
             <%--
                 Acesso ao módulo de Configurações do sistema.

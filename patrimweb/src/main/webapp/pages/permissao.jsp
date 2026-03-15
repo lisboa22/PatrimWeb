@@ -86,7 +86,6 @@
                             <tr>
                                 <th style="width: 60px;">#ID</th>
                                 <th>Módulo</th>
-                                <th>Ação</th>
                                 <th>Descrição</th>
                                 <th style="text-align: center;">Ações</th>
                             </tr>
@@ -108,11 +107,10 @@
                                             <td>
                                                 <span class="badge-modulo">${p.modulo}</span>
                                             </td>
-                                            <td>${p.acao}</td>
                                             <td>${p.descricao}</td>
                                             <td style="text-align: center;">
                                                 <button class="btn-icon" title="Editar"
-                                                    onclick="openModalEditar('${p.idPermissao}', '${p.modulo}', '${p.acao}', '${p.descricao}')">
+                                                    onclick="openModalEditar('${p.idPermissao}', '${p.modulo}', '${p.descricao}')">
                                                     <i class="fa-solid fa-pen"></i>
                                                 </button>
                                                 <button class="btn-icon delete" title="Excluir"
@@ -150,16 +148,6 @@
                             <input type="text" name="modulo" class="form-input"
                                    placeholder="Ex: Equipamentos, Usuários" required>
                         </div>
-                        <div class="form-group full-width">
-						    <label class="form-label">Ação</label>
-						    <select name="acao_permissao" class="form-input" required>
-						        <option value="">Selecione...</option>
-                                <option value="VISUALIZAR">VISUALIZAR</option>
-                                <option value="INSERIR">INSERIR</option>
-                                <option value="EDITAR">EDITAR</option>
-                                <option value="EXCLUIR">EXCLUIR</option>
-						    </select>
-						</div>
                     </div>
 
                     <div class="form-group full-width">
@@ -199,15 +187,6 @@
                             <input type="text" name="modulo" id="edit_modulo"
                                    class="form-input" required>
                         </div>
-                        <div class="form-group full-width">
-						    <label class="form-label">Ação</label>
-						    <select name="acao" id="edit_acao" class="form-input" required>
-                                <option value="VISUALIZAR">VISUALIZAR</option>
-                                <option value="INSERIR">INSERIR</option>
-                                <option value="EDITAR">EDITAR</option>
-                                <option value="EXCLUIR">EXCLUIR</option>
-						    </select>
-						</div>
                     </div>
 
                     <div class="form-group full-width">
@@ -239,10 +218,9 @@
         // ── Modal edição ──
         const modalEditar = document.getElementById('modalEditar');
 
-        function openModalEditar(id, modulo, acao, descricao) {
+        function openModalEditar(id, modulo, descricao) {
             document.getElementById('edit_id_permissao').value = id;
             document.getElementById('edit_modulo').value       = modulo;
-            document.getElementById('edit_acao').value         = acao;
             document.getElementById('edit_descricao').value    = descricao;
             modalEditar.classList.add('show');
         }

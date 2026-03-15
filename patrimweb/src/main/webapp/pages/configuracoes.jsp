@@ -96,7 +96,7 @@
                     <button class="tab-btn" data-aba="seguranca" onclick="openTab(event, 'tab-seguranca')">
                         <i class="fa-solid fa-lock"></i> Segurança
                     </button>
-                    <!--<button class="tab-btn" data-aba="permissoes" onclick="openTab(event, 'tab-permissoes')">
+                    <!--  <button class="tab-btn" data-aba="permissoes" onclick="openTab(event, 'tab-permissoes')">
                         <i class="fa-solid fa-shield-halved"></i> Permissões
                     </button>-->
                 </div>
@@ -324,8 +324,8 @@
                                 Resetar Configuracões de Fábrica
                             </button>
                         </div>
-                    </div>
-                </div>-->
+                    </div>-->
+                </div>
                 <!-- FIM ABA: SEGURANCA -->
 
 
@@ -342,7 +342,7 @@
                         </span>
                     </div>
 
-                    <div class="perm-layout">-->
+                    <div class="perm-layout">
 
                         <!-- ---- Painel esquerdo: lista de perfis ---- -->
                        <div class="perm-sidebar">
@@ -448,20 +448,65 @@
                                                 </c:if>
 
                                                 <label class="perm-row">
-												    <input type="checkbox" 
-												           class="perm-cb" 
-												           data-perm-id="${perm.idPermissao}" 
-												           onchange="marcarDirty()">
-												    
-												    <span class="perm-row-info">
-												        <span class="perm-row-name">${perm.acao}</span>
-												        <c:if test="${not empty perm.descricao}">
-												            <span class="perm-row-desc">${perm.descricao}</span>
-												        </c:if>
-												    </span>
-												
-												    <span class="perm-badge ...">${perm.acao}</span>
-												</label>
+			                                    <input type="checkbox"
+			                                           class="perm-cb"
+			                                           data-perm-id="${perm.idPermissao}"
+			                                           onchange="marcarDirty()">
+			
+			                                    <span class="perm-row-info">
+			                                        <span class="perm-row-name">${perm.modulo}</span>
+			                                    </span>
+			                                    
+			                                    
+			                                    
+			                                    <!--  <input type="checkbox"
+			                                           class="perm-cb"
+			                                           data-perm-id="${perm.modulo}"
+			                                           onchange="marcarDirty()">
+			
+			                                    <span class="perm-row-info">
+			                                        <span class="perm-row-name">Visualizar</span>
+			                                    </span>
+			                                    
+			                                    
+			                                    
+			                                    <input type="checkbox"
+			                                           class="perm-cb"
+			                                           data-perm-id="${perm.idPermissao}"
+			                                           onchange="marcarDirty()">
+			
+			                                    <span class="perm-row-info">
+			                                        <span class="perm-row-name">Inserir</span>
+			                                    </span>
+			                                    
+			                                    
+			                                    
+			                                    <input type="checkbox"
+			                                           class="perm-cb"
+			                                           data-perm-id="${perm.idPermissao}"
+			                                           onchange="marcarDirty()">
+			
+			                                    <span class="perm-row-info">
+			                                        <span class="perm-row-name">Editar</span>
+			                                    </span>
+			                                    
+			                                    
+			                                    
+			                                    <input type="checkbox"
+			                                           class="perm-cb"
+			                                           data-perm-id="${perm.idPermissao}"
+			                                           onchange="marcarDirty()">
+			
+			                                    <span class="perm-row-info">
+			                                        <span class="perm-row-name">Excluir</span>
+			                                    </span>-->
+			                                    
+			                                    
+			                                    
+			                            
+			
+			                                    <span class="perm-badge">${perm.modulo}</span>
+			                                </label>
 
                                             </c:forEach>
                                             <c:if test="${not empty permissoes}"></c:if>

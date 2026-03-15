@@ -97,7 +97,6 @@ package br.com.patrimweb.controller;
 	        try {
 	            Permissao permissao = new Permissao(
 	                    request.getParameter("modulo"),
-	                    request.getParameter("acao_permissao"),
 	                    request.getParameter("descricao")
 	            );
 
@@ -124,7 +123,6 @@ package br.com.patrimweb.controller;
 	            Permissao permissao = new Permissao(
 	                    Integer.parseInt(request.getParameter("id_permissao")),
 	                    request.getParameter("modulo"),
-	                    request.getParameter("acao"),
 	                    request.getParameter("descricao")
 	            );
 

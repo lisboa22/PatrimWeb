@@ -26,12 +26,6 @@ package br.com.patrimweb.model;
 	    private String modulo;
 
 	    /**
-	     * Ação permitida dentro do módulo.
-	     * Ex: VISUALIZAR, INSERIR, EDITAR, EXCLUIR
-	     */
-	    private String acao;
-
-	    /**
 	     * Descrição textual da permissão.
 	     */
 	    private String descricao;
@@ -46,19 +40,17 @@ package br.com.patrimweb.model;
 	     * Construtor completo (SELECT).
 	     */
 	    public Permissao(int id_permissao, String modulo,
-	                     String acao, String descricao) {
+	                     String descricao) {
 	        this.id_permissao = id_permissao;
 	        this.modulo = modulo;
-	        this.acao = acao;
 	        this.descricao = descricao;
 	    }
 
 	    /**
 	     * Construtor para inserção.
 	     */
-	    public Permissao(String modulo, String acao, String descricao) {
+	    public Permissao(String modulo, String descricao) {
 	        this.modulo = modulo;
-	        this.acao = acao;
 	        this.descricao = descricao;
 	    }
 
@@ -76,14 +68,6 @@ package br.com.patrimweb.model;
 
 	    public void setModulo(String modulo) {
 	        this.modulo = modulo;
-	    }
-
-	    public String getAcao() {
-	        return acao;
-	    }
-
-	    public void setAcao(String acao) {
-	        this.acao = acao;
 	    }
 
 	    public String getDescricao() {
